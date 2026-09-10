@@ -125,6 +125,10 @@ export const SCORPION = {
   SPEED_FAST: 9.5,
   FAST_SPEED_UNLOCK_SCORE: 20_000,
   FAST_SPEED_CHANCE_AFTER_UNLOCK: 0.75,
+  // The manual gives eligibility rules but not an exact crossing frequency;
+  // this range is a tunable approximation of a "lurking" cadence.
+  SPAWN_INTERVAL_MIN_MS: 4000,
+  SPAWN_INTERVAL_MAX_MS: 9000,
 } as const;
 
 export const SIDE_FEED = {
