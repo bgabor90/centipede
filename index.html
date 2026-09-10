@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <title>CENTIPEDE</title>
+  <link rel="icon" href="data:," />
+  <style>
+    :root {
+      color-scheme: dark;
+    }
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      background: #000;
+      overflow: hidden;
+      overscroll-behavior: none;
+    }
+    body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Courier New', monospace;
+    }
+    #game-root {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100vw;
+      height: 100vh;
+    }
+    canvas#screen {
+      image-rendering: pixelated;
+      image-rendering: -moz-crisp-edges;
+      image-rendering: crisp-edges;
+      background: #000;
+      box-shadow: 0 0 40px rgba(0, 255, 80, 0.08);
+      cursor: none;
+    }
+    #cabinet-note {
+      position: absolute;
+      bottom: 6px;
+      left: 0;
+      right: 0;
+      text-align: center;
+      color: #333;
+      font-size: 11px;
+      letter-spacing: 1px;
+      pointer-events: none;
+      user-select: none;
+    }
+  </style>
+</head>
+<body>
+  <div id="game-root">
+    <canvas id="screen"></canvas>
+    <div id="cabinet-note">MOUSE = TRAK-BALL &nbsp;•&nbsp; CLICK / SPACE = FIRE &nbsp;•&nbsp; ARROW KEYS ALSO WORK &nbsp;•&nbsp; P = PAUSE &nbsp;•&nbsp; F = FEATURES</div>
+  </div>
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>
