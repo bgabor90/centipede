@@ -13,6 +13,10 @@ export class InputSystem {
   private usingMouse = false;
   private keys = new Set<string>();
   private fireHeld = false;
+  /** One-shot key presses (e.g. pause, feature panel) — populated on keydown
+   * and only cleared when consumed, so a very brief press can't race past a
+   * single animation frame the way checking the "currently held" set would. */
+  private pressedEdges = new Set<string>();
   onFireEdge: (() => void) | null = null;
 
   constructor(private canvas: HTMLCanvasElement) {
@@ -29,6 +33,7 @@ export class InputSystem {
 
     window.addEventListener('keydown', (e) => {
       this.keys.add(e.key.toLowerCase());
+      this.pressedEdges.add(e.key.toLowerCase());
       if (e.key === ' ' || e.key.toLowerCase() === 'z') {
         if (!this.fireHeld) this.onFireEdge?.();
         this.fireHeld = true;
@@ -72,16 +77,12 @@ export class InputSystem {
   }
 
   consumePause(): boolean {
-    if (this.keys.has('p')) {
-      this.keys.delete('p');
-      return true;
-    }
-    return false;
+    return this.consumeKeyPress('p');
   }
 
   consumeKeyPress(key: string): boolean {
-    if (this.keys.has(key)) {
-      this.keys.delete(key);
+    if (this.pressedEdges.has(key)) {
+      this.pressedEdges.delete(key);
       return true;
     }
     return false;

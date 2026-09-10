@@ -235,22 +235,20 @@ export class Game {
         const result = this.mushrooms.shoot(r, col);
         this.shot = null;
         if (result === 'destroyed') {
-          this.score += SCORING.MUSHROOM_DESTROYED;
+          this.addScore(SCORING.MUSHROOM_DESTROYED);
           this.emit('mushroomDestroyed', SCORING.MUSHROOM_DESTROYED);
         } else {
           this.emit('mushroomDamaged');
         }
-        this.checkExtraLife();
         return;
       }
 
       const segHit = this.centipede.findSegmentNear(r, col, 0.6);
       if (segHit) {
         const result = this.centipede.destroySegment(segHit.chain, segHit.index, this.mushrooms);
-        this.score += result.points;
+        this.addScore(result.points);
         this.emit(result.wasHead ? 'centipedeHeadHit' : 'centipedeBodyHit', result.points);
         this.shot = null;
-        this.checkExtraLife();
         return;
       }
 
@@ -258,20 +256,18 @@ export class Game {
         const killed = this.flea.registerHit();
         this.emit(killed ? 'fleaKilled' : 'fleaHit');
         if (killed) {
-          this.score += SCORING.FLEA;
+          this.addScore(SCORING.FLEA);
           this.flea = null;
-          this.checkExtraLife();
         }
         this.shot = null;
         return;
       }
 
       if (this.scorpion && this.scorpion.row === r && this.scorpion.col === col) {
-        this.score += SCORING.SCORPION;
+        this.addScore(SCORING.SCORPION);
         this.emit('scorpionHit', SCORING.SCORPION);
         this.scorpion = null;
         this.shot = null;
-        this.checkExtraLife();
         return;
       }
 
@@ -283,15 +279,20 @@ export class Game {
             : dist <= SCORING.SPIDER_MEDIUM_ROWS
               ? SCORING.SPIDER_MEDIUM
               : SCORING.SPIDER_FAR;
-        this.score += points;
+        this.addScore(points);
         this.emit('spiderHit', points);
         this.spider = null;
         this.spiderTimer = SPIDER.RESPAWN_AFTER_KILL_MS / 1000;
         this.shot = null;
-        this.checkExtraLife();
         return;
       }
     }
+  }
+
+  /** All scoring flows through here so the six-digit register wrap (manual: "the millionth point earned makes the register turn over to zero") and the extra-life check both stay in one place. */
+  private addScore(points: number): void {
+    this.score = (this.score + points) % 1_000_000;
+    this.checkExtraLife();
   }
 
   private checkExtraLife(): void {
@@ -489,9 +490,8 @@ export class Game {
         cell.hits = 0;
       }
       const pts = next.kind === 'poisoned' ? SCORING.MUSHROOM_POISONED_CREDIT : SCORING.MUSHROOM_DAMAGED_CREDIT;
-      this.score += pts;
+      this.addScore(pts);
       this.emit('mushroomTallyTick', pts);
-      this.checkExtraLife();
       return;
     }
 
