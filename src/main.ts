@@ -63,7 +63,7 @@ function frame(now: number): void {
   }
 
   renderer.render(game, game.features);
-  if (paused) drawPausedBanner();
+  if (paused) renderer.drawPausedBanner();
 }
 
 function step(dt: number): void {
@@ -71,16 +71,6 @@ function step(dt: number): void {
   game.update(dt, inputState);
   audio.update(dt, game);
   audio.handle(game.drainEvents());
-}
-
-function drawPausedBanner(): void {
-  const ctx = canvas.getContext('2d')!;
-  ctx.save();
-  ctx.font = 'bold 10px "Courier New", monospace';
-  ctx.fillStyle = '#fff';
-  const text = 'PAUSED';
-  ctx.fillText(text, canvas.width / 2 - ctx.measureText(text).width / 2, canvas.height / 2);
-  ctx.restore();
 }
 
 requestAnimationFrame(frame);
