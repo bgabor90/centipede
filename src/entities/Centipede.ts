@@ -183,13 +183,16 @@ export class Chain {
    * Destroys segment `index`. Returns the resulting new chain (the
    * detached tail), if any, plus whether this chain became empty.
    */
-  destroySegmentAt(index: number): { newChain: Chain | null; destroyedCell: { row: number; col: number } } {
+  destroySegmentAt(
+    index: number,
+    newHeadSpeed = CENTIPEDE_SPEED.FAST
+  ): { newChain: Chain | null; destroyedCell: { row: number; col: number } } {
     const destroyedCell = this.cellOf(index);
     const tailLen = this.length - 1 - index;
     let newChain: Chain | null = null;
     if (tailLen > 0) {
       const tailHistory = this.history.slice(index + 1); // length === tailLen + 1
-      newChain = Chain.fromHistory(tailHistory, tailLen, this.speed, this.verticalDir);
+      newChain = Chain.fromHistory(tailHistory, tailLen, newHeadSpeed, this.verticalDir);
     }
     if (index === 0) {
       this.length = 0; // this chain is fully consumed; caller removes it
@@ -292,7 +295,7 @@ export class CentipedeManager {
   /** Applies a shot hit to segment `index` of `chain`; plants a mushroom; may split the chain. */
   destroySegment(chain: Chain, index: number, mushrooms: MushroomField): HitResult {
     const wasHead = index === 0;
-    const { newChain, destroyedCell } = chain.destroySegmentAt(index);
+    const { newChain, destroyedCell } = chain.destroySegmentAt(index, CENTIPEDE_SPEED.FAST);
     mushrooms.plant(destroyedCell.row, destroyedCell.col, { force: true });
     if (chain.isEmpty) {
       this.chains = this.chains.filter((c) => c !== chain);

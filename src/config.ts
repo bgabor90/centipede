@@ -69,15 +69,11 @@ export const WAVE_CYCLE = {
 } as const;
 
 export const CENTIPEDE_SPEED = {
-  // APPROXIMATED: the disassembly confirms two discrete speed values
-  // (`plyr_cent_spd` = 1 or 2) exist but the fetched excerpt didn't give
-  // pixels-per-frame numbers, so these are tuned to feel right against the
-  // Video Master's Guide's qualitative "fast wave / slow wave" descriptions
-  // rather than transcribed from a verified source value.
-  // Cells per second, along a row. Poisoned links move at the FAST rate
-  // regardless of the wave's nominal speed (they're rushing to the bottom).
-  SLOW: 4.2,
-  FAST: 8.4,
+  // VERIFIED (6502disassembly.com/va-centipede): centipede movement uses
+  // two discrete arcade speeds, 1px/frame and 2px/frame. At 60fps on the
+  // original 8px tile grid, those are 7.5 and 15 cells/sec.
+  SLOW: 7.5,
+  FAST: 15,
   // Vertical drop takes the same per-cell duration as a horizontal step.
 } as const;
 
