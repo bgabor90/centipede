@@ -79,6 +79,10 @@ interface WaveSpec {
 // tally credits one cell every 8 frames (`frame_ctr & 7 == 0`), not the
 // previous, roughly-2x-faster 0.06s guess.
 const TALLY_TICK_SECONDS = 8 / 60;
+// VERIFIED (UpdateExplosions, $2701-$2744): a killed enemy's picture
+// counts down one step per frame from $ff to $f9 (6 steps) before the
+// slot clears -- a brief flash rather than an instant disappearance.
+const KILL_FLASH_SECONDS = 6 / 60;
 const INITIALS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ ';
 
 export class Game {
@@ -122,6 +126,11 @@ export class Game {
   private tallyTimer = 0;
   /** The mushroom cell the end-of-life tally just credited, for the renderer to flash. Null when no tally is in progress. */
   tallyHighlight: { row: number; col: number } | null = null;
+  // VERIFIED (UpdateExplosions, $2701-$2744): a killed centipede segment/
+  // spider/flea/scorpion's picture counts down from $ff to $f9 one step
+  // per frame (no extra gating) before the slot is finally cleared -- a
+  // brief ~6-frame (~0.1s) flash, not the instant disappearance we had.
+  killFlashes: Array<{ row: number; col: number; timer: number }> = [];
   private deathTimer = 0;
   private justClearedWave = false;
   // VERIFIED (:IncSpeed, $3072 in the Rev4 disassembly): clearing a wave
@@ -184,6 +193,7 @@ export class Game {
     this.sideFeedLinksThisActivation = 0;
     this.nextSpeedForComposition.clear();
     this.waveDelayTimer = 0;
+    this.killFlashes = [];
     this.shooter.reset();
     this.currentWave = { compositionIndex0: 0, chainLength: 12, singleHeads: 0, speed: 'fast' };
     this.spawnWave(this.currentWave);
@@ -216,6 +226,7 @@ export class Game {
     this.sideFeedTimer = 0;
     this.sideFeedLinksThisActivation = 0;
     this.nextSpeedForComposition.clear();
+    this.killFlashes = [];
     this.shooter.reset();
     this.shooter.moveToward(15, 1.5, 1, this.mushrooms, true);
     this.currentWave = { compositionIndex0: 0, chainLength: 12, singleHeads: 0, speed: 'fast' };
@@ -325,6 +336,7 @@ export class Game {
       this.onWaveClear();
     }
     this.updateWaveDelay(dt);
+    this.updateKillFlashes(dt);
   }
 
   // The real ROM has no exclusive "title card" / "demo" / "high scores"
@@ -402,6 +414,7 @@ export class Game {
       this.onWaveClear();
     }
     this.updateWaveDelay(dt);
+    this.updateKillFlashes(dt);
   }
 
   // ---------------------------------------------------------------------
@@ -441,6 +454,7 @@ export class Game {
         const result = this.centipede.destroySegment(segHit.chain, segHit.index, this.mushrooms);
         this.addScore(result.points);
         this.emit(result.wasHead ? 'centipedeHeadHit' : 'centipedeBodyHit', result.points);
+        this.spawnKillFlash(result.cell.row, result.cell.col);
         this.shot = null;
         return;
       }
@@ -454,6 +468,7 @@ export class Game {
         this.emit(killed ? 'fleaKilled' : 'fleaHit');
         if (killed) {
           this.addScore(SCORING.FLEA);
+          this.spawnKillFlash(this.flea.row, this.flea.col);
           this.flea = null;
         }
         this.shot = null;
@@ -463,6 +478,7 @@ export class Game {
       if (this.scorpion && this.scorpion.row === r && Math.abs(this.scorpion.x - col) <= 0.6) {
         this.addScore(SCORING.SCORPION);
         this.emit('scorpionHit', SCORING.SCORPION);
+        this.spawnKillFlash(this.scorpion.row, this.scorpion.col);
         this.scorpion = null;
         this.shot = null;
         return;
@@ -481,12 +497,23 @@ export class Game {
               : SCORING.SPIDER_FAR;
         this.addScore(points);
         this.emit('spiderHit', points);
+        this.spawnKillFlash(this.spider.row, this.spider.col);
         this.spider = null;
         this.spiderTimer = SPIDER.RESPAWN_AFTER_KILL_MS / 1000;
         this.shot = null;
         return;
       }
     }
+  }
+
+  private spawnKillFlash(row: number, col: number): void {
+    this.killFlashes.push({ row, col, timer: KILL_FLASH_SECONDS });
+  }
+
+  private updateKillFlashes(dt: number): void {
+    if (this.killFlashes.length === 0) return;
+    for (const flash of this.killFlashes) flash.timer -= dt;
+    this.killFlashes = this.killFlashes.filter((f) => f.timer > 0);
   }
 
   /** All scoring flows through here so the six-digit register wrap (manual: "the millionth point earned makes the register turn over to zero") and the extra-life check both stay in one place. */

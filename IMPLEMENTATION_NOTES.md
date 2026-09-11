@@ -271,6 +271,20 @@ for spider/scorpion), and the centipede segment draw call was using that
 same default instead of passing its own verified `2`. Fixed both the
 mask-based and custom-sprite-sheet centipede draw paths.
 
+## Kill flash for centipede/spider/flea/scorpion
+
+`UpdateExplosions` ($2701-$2744) shows a killed enemy doesn't vanish
+instantly -- its picture counts down one step per frame from $ff to $f9
+(6 steps, ~0.1s at 60fps, no extra gating) before the slot finally
+clears. The game previously removed killed entities the same frame with
+no visual feedback at all. Added `Game.killFlashes` (spawned at each of
+the four kill sites: centipede segment, flea, scorpion, spider) and a
+matching `drawKillFlash` in `Renderer.ts` -- a brief solid flash at the
+kill cell, reusing the existing tally-flash color rather than new sprite
+art for an animation that's under a fifth of a second on real hardware
+anyway. Verified directly: flash persists for exactly 6 frames then
+clears.
+
 ## Explicitly approximated (flagged, not verified anywhere)
 
 - Named RGB hex values for each DBGR color (the source names colors, e.g.

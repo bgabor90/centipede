@@ -102,6 +102,7 @@ export class Renderer {
     if (game.flea) this.drawFlea(game.flea);
     if (game.scorpion) this.drawScorpion(game.scorpion);
     if (game.shot) this.drawShot(game.shot);
+    for (const flash of game.killFlashes) this.drawKillFlash(flash);
     if (game.state === 'PLAYING' || game.state === 'ATTRACT' || game.state === 'HIGH_SCORE_ENTRY') {
       this.drawShooter(game.shooter, palette.legs);
     }
@@ -228,6 +229,16 @@ export class Renderer {
   // that mushroom pop for the few frames it holds before the next one lights.
   private drawTallyHighlight(cell: { row: number; col: number }): void {
     this.rect(this.px(cell.col), this.py(cell.row), CELL, CELL, COLORS.tallyFlash);
+  }
+
+  // VERIFIED (UpdateExplosions, $2701-$2744): a killed centipede segment/
+  // spider/flea/scorpion doesn't just vanish -- its picture counts down
+  // through a handful of frames before the slot clears. A brief solid
+  // flash at the kill cell reproduces that pop without needing new sprite
+  // art for a multi-frame animation that lasts well under a fifth of a
+  // second on real hardware anyway.
+  private drawKillFlash(flash: { row: number; col: number }): void {
+    this.rect(this.px(flash.col), this.py(flash.row), CELL, CELL, COLORS.tallyFlash);
   }
 
   private drawCentipede(game: Game, palette: { body: string; legs: string; eyes: string }): void {
