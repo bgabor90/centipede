@@ -18,6 +18,7 @@ export interface Vec2 {
 export type GameStateName =
   | 'ATTRACT'
   | 'PLAYING'
+  | 'PLAYER_DEATH_ANIMATION'
   | 'LIFE_LOST_TALLY'
   | 'WAVE_CLEAR'
   | 'GAME_OVER'

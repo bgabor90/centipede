@@ -225,6 +225,53 @@ export const SHOOTER_MASK: Mask = [
   '......FFF.......',
 ];
 
+/**
+ * Built-in fallback for player death. This keeps a visible blast in case the
+ * custom sprite sheet does not include an `explosion` mapping yet.
+ */
+export const PLAYER_DEATH_EXPLOSION_FRAMES: Mask[] = [
+  [
+    '.......F........',
+    '......FFF.......',
+    '.....FFFFF......',
+    '....FFFFFFF.....',
+    '.....FFFFF......',
+    '......FFF.......',
+    '.......F........',
+    '................',
+  ],
+  [
+    '......FFF.......',
+    '.....FFFFF......',
+    '...FFFFFFFFF....',
+    '..FFFFFFFFFFF...',
+    '..FFFFFFFFFFF...',
+    '...FFFFFFFFF....',
+    '.....FFFFF......',
+    '......FFF.......',
+  ],
+  [
+    '.....FFFFF......',
+    '...FFF...FFF....',
+    '..FFF.....FFF...',
+    '.FFFFFFFFFFFF...',
+    '..FFF.....FFF...',
+    '...FFF...FFF....',
+    '.....FFFFF......',
+    '......FFF.......',
+  ],
+  [
+    '....FFFFFFF.....',
+    '...FFFFFFFFF....',
+    '..FFFFFFFFFFF...',
+    '.FFFFFFFFFFFF...',
+    '..FFFFFFFFFFF...',
+    '...FFFFFFFFF....',
+    '....FFFFFFF.....',
+    '.....F...F......',
+  ],
+];
+
 export const MASK_W = 16;
 export const MASK_H = 8;
 

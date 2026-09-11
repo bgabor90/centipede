@@ -78,6 +78,7 @@ interface WaveSpec {
 }
 
 const TALLY_TICK_SECONDS = 0.06;
+const PLAYER_DEATH_ANIMATION_SECONDS = 0.5;
 const ATTRACT_PHASE_SECONDS: Record<AttractPhase, number> = {
   TITLE: 4,
   DEMO: 12,
@@ -126,6 +127,7 @@ export class Game {
   private tallyQueue: Array<{ row: number; col: number; kind: 'poisoned' | 'damaged' }> = [];
   private tallyTimer = 0;
   private deathTimer = 0;
+  private playerDeathLocation: { x: number; y: number } | null = null;
   private justClearedWave = false;
   private attractTimer = 0;
   private attractDemoTimer = 0;
@@ -155,6 +157,7 @@ export class Game {
     this.scatterInitialMushrooms();
     this.centipede.clear();
     this.shot = null;
+    this.playerDeathLocation = null;
     this.spider = null;
     this.flea = null;
     this.scorpion = null;
@@ -187,6 +190,7 @@ export class Game {
     this.scatterAttractMushrooms();
     this.centipede.clear();
     this.shot = null;
+    this.playerDeathLocation = null;
     this.spider = null;
     this.flea = null;
     this.scorpion = null;
@@ -234,6 +238,9 @@ export class Game {
       case 'ATTRACT':
         this.updateAttract(dt);
         break;
+      case 'PLAYER_DEATH_ANIMATION':
+        this.updatePlayerDeathAnimation(dt);
+        break;
       case 'LIFE_LOST_TALLY':
         this.updateTally(dt);
         break;
@@ -247,6 +254,10 @@ export class Game {
 
   private emit(type: GameEventType, points?: number): void {
     this.events.push({ type, points });
+  }
+
+  get playerDeathPosition(): { x: number; y: number } | null {
+    return this.playerDeathLocation;
   }
 
   /** Drains queued events (call once per frame from the render/audio loop). */
@@ -581,9 +592,20 @@ export class Game {
     this.emit('playerDeath');
     this.lives--;
     this.shot = null;
+    this.playerDeathLocation = { x: this.shooter.x, y: this.shooter.y };
+    this.deathTimer = PLAYER_DEATH_ANIMATION_SECONDS;
+    this.shooter.alive = false;
+    this.state = 'PLAYER_DEATH_ANIMATION';
+  }
+
+  private updatePlayerDeathAnimation(dt: number): void {
+    this.deathTimer -= dt;
+    if (this.deathTimer > 0) return;
+
     this.buildTallyQueue();
-    this.state = 'LIFE_LOST_TALLY';
     this.tallyTimer = 0;
+    this.playerDeathLocation = null;
+    this.state = 'LIFE_LOST_TALLY';
   }
 
   private buildTallyQueue(): void {
