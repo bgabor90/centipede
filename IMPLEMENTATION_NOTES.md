@@ -521,6 +521,72 @@ non-qualifying game-over takes exactly 256 update frames to return to
 `ATTRACT`, while a qualifying one reaches `HIGH_SCORE_ENTRY` in a single
 frame.
 
+## Sound synthesis rebuilt from the actual POKEY tables, not invented envelopes
+
+Every effect in `AudioSystem.ts` was previously a hand-picked frequency/
+duration/envelope with no relationship to the ROM at all -- only the
+channel *assignments* (which effect uses CH1-CH4) had been verified.
+`UpdateSound` ($3079-$3171), read directly from the raw listing, shows
+each effect is actually driven by a fixed byte table of raw POKEY AUDF/
+AUDC values (`snd_freq0`-`snd_freq6`, $3172-$31fa) stepped at a specific
+per-effect cadence:
+
+- **Shot** (CH3): 11 steps, one per frame (~0.183s total), sweeping
+  ~133Hz -> ~395Hz -- not the previous single 50ms 900->1400Hz slide.
+- **Player death / every enemy kill** (CH1): 19 steps, one per 4 frames
+  (~1.27s total, starting with 4 silent steps), rising in pitch and
+  volume together. `:UpdateScore` ($3048-$3055) shows a centipede
+  segment, flea, scorpion, *and* spider kill all share this exact same
+  sound and channel as player death -- not a distinct per-enemy sound, and
+  not silence, which is what those four events had (a gap this rebuild
+  also fixes, separate from the waveform-shape fix itself).
+  Replaces a short white-noise burst.
+- **Bonus life** (CH2): 17 steps, one per 8 frames (~2.27s total), a
+  specific rise/dip/rise contour -- not the previous quick 4-note 0.36s
+  arpeggio.
+- **Spider** (CH4, its own dedicated channel): 20 steps, one per *other*
+  frame (~0.667s per loop, continuous while alive), alternating tone/
+  silence with pitch dipping ~5.3kHz -> ~590Hz -- not a single 3-note
+  chime played once per spawn/kill (spawn/kill don't play a distinct
+  sound on real hardware at all; `InitSpider` explicitly zeroes the sound
+  index).
+- **Scorpion** (CH2): 20 steps, one per frame (~0.333s per loop,
+  continuous while alive) -- not a one-shot whistle.
+- **Flea** (CH2): not table-driven at all -- $311a-$3123 recomputes AUDF
+  directly from the flea's live vertical position every single frame
+  (`((vert >> 1) XOR $ff) OR $80`), so it's synthesized as one
+  continuously-retuned oscillator tracking its fall, not a fixed table or
+  the previous one-shot descending whistle.
+- **Centipede movement** (CH2, lowest priority / ambient default): 7
+  steps, one per frame (~0.117s per loop, continuous while any segment is
+  alive) -- not a hand-tuned two-tone 70/90Hz heartbeat.
+
+`pokeyHz()` converts a raw AUDF byte to Hz using POKEY's standard,
+hardware-documented (not ROM-specific) formula for its default channel
+mode, which this ROM's `POKEY_AUDCTL` ($20) leaves every channel in. The
+exact absolute Hz isn't independently calibrated against real recorded
+audio, only the byte tables and their timing are -- treat the resulting
+pitch as a faithful *shape*, the same honesty this project already
+applies to its color hex values.
+
+Separately, $30d4-$3128 shows channel 2 is a genuinely shared, single
+voice with a strict priority order: bonus beats scorpion/flea, which
+beats the centipede's own ambient movement thump -- `:ChkBonus` falls
+through past the scorpion/flea/centipede-move checks entirely while
+bonus is playing, and `:ChkFSE`'s own scorpion/flea check falls through
+to centipede-move only when neither is active. Previously each was an
+independent Web Audio oscillator that could all sound simultaneously --
+something the real single-voice channel can never do. `playCh2()`/
+`playCh2Sample()` in `AudioSystem.ts` now enforce that same one-voice,
+priority-ordered rule (extended to the optional real-sample hook too, so
+a supplied WAV for one role still can't play over a higher-priority
+one). `update()`'s continuous-sound handling was also folded into the
+same `isAttractLike()` gate `handle()` already used (a first pass had it
+checking `state !== 'PLAYING'` instead, which would have wrongly muted
+CH2/CH4 during `LIFE_LOST_TALLY`/`PLAYER_DEATH_ANIMATION` -- states where
+the manual's spider/flea/scorpion-keep-running behavior, and so their
+sound too, should still apply).
+
 ## Explicitly approximated (flagged, not verified anywhere)
 
 - Named RGB hex values for each DBGR color (the source names colors, e.g.
