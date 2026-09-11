@@ -238,14 +238,22 @@ export class Game {
     }
   }
 
+  // VERIFIED (InitPlay, $28e4-$2934 in the Rev4 disassembly): 46 placement
+  // attempts, walking row 27 down to row 2, wrapping back to 27 partway
+  // through -- rows 8-27 get two attempts each (so can end up with up to 2
+  // mushrooms), rows 2-7 get only one (at most 1 mushroom), and rows 1 and
+  // 28-30 never get any. A duplicate pick on an already-planted cell is a
+  // no-op (mushrooms.plant() already skips occupied cells by default),
+  // matching the source's own "if the same spot is picked twice, the row
+  // will have only one mushroom" note. Replaces a hand-tuned 28-36-count
+  // uniform scatter across the full row range.
   private scatterInitialMushrooms(): void {
-    // A believable opening field: a modest, randomly scattered patch,
-    // biased toward the outfield, matching the "sparse early screen" look.
-    const count = this.rng.int(28, 36);
-    for (let i = 0; i < count; i++) {
-      const row = this.rng.int(ZONES.MUSHROOM_MIN_ROW, GRID.ROWS);
+    let row = 27;
+    for (let i = 0; i < 46; i++) {
       const col = this.rng.int(1, GRID.COLS);
       this.mushrooms.plant(row, col);
+      row--;
+      if (row < 2) row = 27;
     }
   }
 

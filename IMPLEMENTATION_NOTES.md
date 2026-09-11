@@ -175,6 +175,14 @@ Fetched and cross-checked this session (see citations in `config.ts` /
   one more rejected value), excluding our columns 1-2 from flea spawns.
   Also checked high-score qualification (8-entry table, strict `>`
   comparison) against `UpdateHS` -- already an exact match.
+- **Initial mushroom scatter algorithm**: `InitPlay` ($28e4-$2934) makes
+  exactly 46 placement attempts, walking row 27 down to row 2 and
+  wrapping back to 27 partway through -- rows 8-27 get two attempts each
+  (up to 2 mushrooms), rows 2-7 get one (at most 1), and rows 1 and 28-30
+  never get any. A duplicate pick on an occupied cell is a no-op, per the
+  source's own comment. Replaced a hand-tuned 28-36-count uniform scatter
+  across the full row range with this exact algorithm. Verified across 20
+  trials: always 46 mushrooms, rows strictly 2-27, max 2 per row.
 
 ## Behaviors kept from the Video Master's Guide (not overridden)
 
