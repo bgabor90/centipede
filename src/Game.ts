@@ -467,12 +467,21 @@ export class Game {
     this.checkExtraLife();
   }
 
+  // VERIFIED (AddPoints, $2dba): the ROM advances its "next bonus
+  // threshold" tracker every time the current one is crossed regardless of
+  // outcome, but only actually grants a life while current lives are below
+  // 6 (`cmp #6; beq :XReturn`) -- a cap on total lives, not on how many
+  // bonuses have been awarded. bonusLivesAwarded < LIVES.MAX_BONUS_LIVES
+  // was gating on the wrong quantity: with a low starting-lives option, a
+  // player could previously stack up to startingLives + 6 total lives.
   private checkExtraLife(): void {
     const threshold = this.options.extraLifeScore * (this.bonusLivesAwarded + 1);
-    if (this.score >= threshold && this.bonusLivesAwarded < LIVES.MAX_BONUS_LIVES) {
+    if (this.score >= threshold) {
       this.bonusLivesAwarded++;
-      this.lives++;
-      this.emit('extraLife');
+      if (this.lives < LIVES.MAX_BONUS_LIVES) {
+        this.lives++;
+        this.emit('extraLife');
+      }
     }
   }
 

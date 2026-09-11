@@ -151,6 +151,15 @@ Fetched and cross-checked this session (see citations in `config.ts` /
   the manual's "fast waves always repeat the composition of the
   preceding slow wave" pairing rule, and `InitCentipede`'s score-gated
   ($40,000) slow/fast assignment -- both already matched.
+- **Extra-life cap gated the wrong quantity**: `AddPoints` ($2dba) caps
+  bonus lives by checking *current total lives* (`cmp #6`), not how many
+  bonuses have been awarded. `checkExtraLife()` was gating on
+  `bonusLivesAwarded < 6`, so with a low starting-lives option a player
+  could stack up to startingLives + 6 total lives. Fixed to cap on
+  `this.lives < LIVES.MAX_BONUS_LIVES`, while still advancing
+  `bonusLivesAwarded` (the next-threshold tracker) every time a threshold
+  is crossed regardless of whether the cap blocks the actual life, matching
+  the ROM's unconditional threshold-tracker update.
 
 ## Behaviors kept from the Video Master's Guide (not overridden)
 
