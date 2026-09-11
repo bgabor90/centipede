@@ -425,49 +425,95 @@ export const SHOOTER_MASK: Mask = [
 ];
 
 /**
- * Built-in fallback for player death. This keeps a visible blast in case the
- * custom sprite sheet does not include an `explosion` mapping yet.
+ * Player death explosion, sampled from the eight-frame shrinking-burst row
+ * in the local reference sheet (the same row that holds the player's shot
+ * sprite in column 0). `F` is the outer green spark ring, `D` is the inner
+ * red core, and `H` is the pale-yellow highlight speckled through it. Real
+ * hardware plays these in order, largest to smallest, over the player's
+ * ~0.53s explosion sequence (see PLAYER_DEATH_ANIMATION_SECONDS) rather
+ * than looping, so the renderer picks a frame from elapsed death-timer
+ * progress instead of the free-running animation clock.
  */
 export const PLAYER_DEATH_EXPLOSION_FRAMES: Mask[] = [
   [
-    '.......F........',
-    '......FFF.......',
-    '.....FFFFF......',
-    '....FFFFFFF.....',
-    '.....FFFFF......',
-    '......FFF.......',
-    '.......F........',
+    '.F...F...F...F..',
+    'FDF.FDF.FFD.FDF.',
+    '.FHFDDDFFDDDFFHF',
+    '..FDDDDDDDDDDFF.',
+    '.FHFDDDFFDDDFF..',
+    'FDFFDFDFFDFDHFF.',
+    '.FDF.FHF.FHF.FDF',
+    '..F...F...F...F.',
+  ],
+  [
+    '..F....FF....F..',
+    '.FDF..FFDF..FDF.',
+    'FDDDFFFDDDFFDDDF',
+    'DDHDDFDDHDDDDHDD',
+    'FDDDFFFDDDFFDDDF',
+    'FDFDF.FDFDFFDFDF',
+    '.FFF...FFF..FFF.',
+    '..F.....F....F..',
+  ],
+  [
+    '...F...DD...F...',
+    '..FDF.DDDD.FDF..',
+    'FFDDDFFHHFFDDDFF',
+    'DDDDDDDFFDDDDDDD',
+    'FHDFDHFFFFHDFDHF',
+    '.DDFDDHFFHDDFDD.',
+    'DDFFFDD..DDFFFDD',
+    '.F.F.F....F.F.F.',
+  ],
+  [
+    '...F..F..F..F...',
+    '.FFDF.FFFFHFDFF.',
+    '.FDFHFDFFDFHFDFF',
+    'FDFHFHFDDFHFHFD.',
+    '.DFFHDFHHFDHFFDF',
+    'FFDDFDHFFHDFDDF.',
+    '.FFHDFFDDFFD.FF.',
+    '..F.F......F.F..',
+  ],
+  [
+    '.......FF.......',
+    '..F...FDDF...F..',
+    '.FDFFFFFHDFFFDF.',
+    '..HDDHFDHFHDDH..',
+    '..DHFDHFDDHFHD..',
+    '.FDFF.FHFF.FFDF.',
+    '..F....FF....F..',
     '................',
   ],
   [
-    '......FFF.......',
-    '.....FFFFF......',
-    '...FFFFFFFFF....',
-    '..FFFFFFFFFFF...',
-    '..FFFFFFFFFFF...',
-    '...FFFFFFFFF....',
-    '.....FFFFF......',
-    '......FFF.......',
+    '......H.........',
+    '.....F.DF.D.....',
+    '....FHDHHFHD....',
+    '..FDHH.DHFFFFD..',
+    '..DFFFFHDHHHDF..',
+    '....DHFHHDHF....',
+    '.....D.FD.F.....',
+    '................',
   ],
   [
-    '.....FFFFF......',
-    '...FFF...FFF....',
-    '..FFF.....FFF...',
-    '.FFFFFFFFFFFF...',
-    '..FFF.....FFF...',
-    '...FFF...FFF....',
-    '.....FFFFF......',
-    '......FFF.......',
+    '..........D.....',
+    '.......D.F......',
+    '......FHFH.F....',
+    '....DDFHHF.D....',
+    '....F.HFHF......',
+    '......F.D.......',
+    '................',
+    '................',
   ],
   [
-    '....FFFFFFF.....',
-    '...FFFFFFFFF....',
-    '..FFFFFFFFFFF...',
-    '.FFFFFFFFFFFF...',
-    '..FFFFFFFFFFF...',
-    '...FFFFFFFFF....',
-    '....FFFFFFF.....',
-    '.....F...F......',
+    '................',
+    '................',
+    '................',
+    '......F.F.......',
+    '.....DDFHD......',
+    '......DFF.......',
+    '................',
+    '................',
   ],
 ];
 

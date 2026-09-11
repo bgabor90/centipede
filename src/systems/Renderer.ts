@@ -49,7 +49,10 @@ const COLORS = {
   scorpionTail: '#cc6a12',
   shot: '#ff3333',
   tallyFlash: '#ffffff',
-  explosion: '#ffae00',
+  // Sampled from the reference sheet's explosion-burst row.
+  explosionSpark: '#75fb4c',
+  explosionCore: '#ea3323',
+  explosionHighlight: '#fffdc8',
   gridLine: 'rgba(255,255,255,0.08)',
   disclaimer: '#3a3a3a',
 } as const;
@@ -352,8 +355,16 @@ export class Renderer {
       return;
     }
 
-    renderMask(this.putPixel, pickMaskFrame(PLAYER_DEATH_EXPLOSION_FRAMES, this.frame), cx, cy, {
-      F: COLORS.explosion,
+    // Plays once, largest to smallest, keyed to the death timer's own
+    // progress rather than the free-running animation clock `this.frame`
+    // used elsewhere -- a looping/cyclic pick would show a random frame at
+    // the moment of death and could visibly wrap mid-shrink.
+    const frames = PLAYER_DEATH_EXPLOSION_FRAMES;
+    const frameIndex = Math.min(frames.length - 1, Math.floor(game.playerDeathProgress * frames.length));
+    renderMask(this.putPixel, frames[frameIndex], cx, cy, {
+      F: COLORS.explosionSpark,
+      D: COLORS.explosionCore,
+      H: COLORS.explosionHighlight,
     });
   }
 

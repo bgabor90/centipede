@@ -325,6 +325,12 @@ export class Game {
     return this.playerDeathLocation;
   }
 
+  /** Elapsed fraction (0..1) through the player's explosion sequence, for picking a frame deterministically instead of off the free-running animation clock. */
+  get playerDeathProgress(): number {
+    const remaining = Math.max(0, Math.min(1, this.deathTimer / PLAYER_DEATH_ANIMATION_SECONDS));
+    return 1 - remaining;
+  }
+
   /** Drains queued events (call once per frame from the render/audio loop). */
   drainEvents(): GameEvent[] {
     const out = this.events.slice();
