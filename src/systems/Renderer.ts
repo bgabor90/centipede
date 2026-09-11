@@ -248,13 +248,19 @@ export class Renderer {
     const custom = getCustomSpriteSheet();
     const customFrames = v.isHead ? custom?.mapping.centipedeHead?.frames : custom?.mapping.centipedeBody?.frames;
     if (custom && customFrames && customFrames.length > 0) {
-      const frame = pickFrame(customFrames, this.frame);
+      // VERIFIED (MoveCentipede's :SegAlive, $296d-$297a): leg picture
+      // advances every other frame, not the default every-4-frames rate.
+      const frame = pickFrame(customFrames, this.frame, 2);
       custom.sheet.draw(this.ctx, frame.col, frame.row, cx - 8, cy - 4, 16, 8, flip);
       return;
     }
 
     const frames = v.isHead ? CENTIPEDE_HEAD_FRAMES : CENTIPEDE_BODY_FRAMES;
-    renderMask(this.putPixel, pickMaskFrame(frames, this.frame), cx, cy, {
+    // VERIFIED (MoveCentipede's :SegAlive, $296d-$297a): the leg picture
+    // advances every OTHER frame (frame_ctr & 1 == 0), twice as fast as
+    // the spider/scorpion's own verified every-4-frames rate that this
+    // helper's default matches.
+    renderMask(this.putPixel, pickMaskFrame(frames, this.frame, 2), cx, cy, {
       F: bodyColor,
       D: palette.eyes,
       L: palette.legs,

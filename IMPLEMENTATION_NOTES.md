@@ -261,6 +261,16 @@ Follow-up adjustments after user feedback on the resulting visuals:
   used separate synth voices -- this only fixes the channel labeling and
   which role a future real WAV sample should fill).
 
+## Centipede leg-animation rate
+
+`MoveCentipede`'s `:SegAlive` ($296d-$297a) advances a live segment's leg
+picture every *other* frame (`frame_ctr & 1 == 0`), twice as fast as the
+spider/scorpion's own verified every-4-frames animation rate. `Renderer.
+ts`'s `pickMaskFrame`/`pickFrame` default to `stepEveryNFrames = 4` (correct
+for spider/scorpion), and the centipede segment draw call was using that
+same default instead of passing its own verified `2`. Fixed both the
+mask-based and custom-sprite-sheet centipede draw paths.
+
 ## Explicitly approximated (flagged, not verified anywhere)
 
 - Named RGB hex values for each DBGR color (the source names colors, e.g.
