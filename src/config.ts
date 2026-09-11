@@ -30,6 +30,8 @@ export const LIVES = {
   STARTING_OPTIONS: [2, 3, 4, 5],
   STARTING_DEFAULT: 3,
   MAX_BONUS_LIVES: 6,
+  // VERIFIED (Video Master's Guide Table 3, cross-confirmed by
+  // 6502disassembly.com's bonus_score_tbl: $0100/$0120/$0150/$0200 BCD).
   EXTRA_LIFE_SCORE_OPTIONS: [10_000, 12_000, 15_000, 20_000],
   EXTRA_LIFE_SCORE_DEFAULT: 12_000,
 };
@@ -111,12 +113,25 @@ export const FLEA = {
 } as const;
 
 export const SPIDER = {
-  SPEED_SLOW: 5.5,
-  SPEED_FAST: 10.5,
+  // VERIFIED-BY-ANALOGY (6502disassembly.com Centipede_rev4.html): the
+  // source labels these "speed 1 (slow)" / "speed 2 (fast)" — the exact
+  // same convention confirmed for the centipede, which resolves to a
+  // literal 1px/2px per frame. Inferring the same absolute values here by
+  // analogy (60fps, 8px/cell -> 7.5 / 15 cells/sec); not independently
+  // confirmed that "speed 1/2" means pixels/frame for the spider specifically.
+  SPEED_SLOW: 7.5,
+  SPEED_FAST: 15,
   SPEEDUP_SCORE_EASY: 5_000,
   SPEEDUP_SCORE_HARD: 1_000,
   RESPAWN_AFTER_KILL_MS: 4_000,
-  RESPAWN_AFTER_ESCAPE_MS: 1_900,
+  // VERIFIED (6502disassembly.com): source comment reads "check again in
+  // 48 frames (~3/4 sec)" for the post-escape recheck (60fps -> 800ms).
+  // The kill-cooldown above stays at the Video Master's Guide's clearer
+  // "about 4 seconds" — a separate disassembly fragment suggested a much
+  // shorter (15-47 frame) value there, but it read as an ambiguous
+  // sub-timer rather than a confirmed player-facing respawn delay, so a
+  // complete, unambiguous source was preferred over a fragmentary one.
+  RESPAWN_AFTER_ESCAPE_MS: 800,
   // Table 6: max row the spider may rise to, keyed by score threshold.
   ZONE_BY_SCORE: [
     { upTo: 79_999, maxRow: 12 },
@@ -132,6 +147,12 @@ export const SPIDER = {
 } as const;
 
 export const SCORPION = {
+  // Still approximated (Video Master's Guide gives eligibility/behavior
+  // but no exact speed). A disassembly query for scorpion speed returned
+  // "2px/3px per frame at 60,000 points" — identical to the already-
+  // verified FLEA values — which is almost certainly the summarizer
+  // re-surfacing flea data under a scorpion prompt rather than genuine
+  // scorpion data, so it was discarded rather than trusted.
   SPEED_SLOW: 4.5,
   SPEED_FAST: 9.5,
   FAST_SPEED_UNLOCK_SCORE: 20_000,
