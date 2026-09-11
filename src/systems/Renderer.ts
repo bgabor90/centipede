@@ -4,7 +4,8 @@ import type { SegmentView } from '../entities/Centipede';
 import type { FeatureFlags } from '../config';
 import { GLYPH_W, drawBitmapText, measureText } from './BitmapFont';
 import { getWavePalette } from './Palette';
-import { CENTIPEDE_MASK, FLEA_MASK, SCORPION_MASK, SPIDER_MASK, renderMask } from './Sprites';
+import { CENTIPEDE_MASK, FLEA_MASK, SCORPION_MASK, SPIDER_FRAMES, type Mask, renderMask } from './Sprites';
+import { getCustomSpriteSheet, pickFrame } from './spriteMapping';
 
 // Verified screen/tile geometry (6502disassembly.com/va-centipede/graphics.html):
 // "Resolution: 240x256 pixels", "30x32 grid of 8x8 pixel tiles", gameplay
@@ -28,8 +29,9 @@ const COLORS = {
   stem: '#e8e8d8',
   capPoison: '#a64bff',
   poisonedSeg: '#a64bff',
-  spiderBody: '#33d0ff',
-  spiderLeg: '#ff6ec8',
+  spiderBody: '#00f01d',
+  spiderLeg: '#fffbc0',
+  spiderCenter: '#ff1a0d',
   flea: '#ff3c6e',
   scorpion: '#ffb02e',
   scorpionTail: '#cc6a12',
@@ -215,9 +217,18 @@ export class Renderer {
 
   // -- entities -------------------------------------------------------------
   private drawMushrooms(game: Game, fillColor: string, rimColor: string): void {
+    const custom = getCustomSpriteSheet();
     game.mushrooms.forEach((row, col, cell) => {
       const x = this.px(col);
       const y = this.py(row);
+
+      if (custom?.mapping.mushroom) {
+        const stages = custom.mapping.mushroom.stages;
+        const stage = stages[Math.min(cell.hits, stages.length - 1)];
+        custom.sheet.draw(this.ctx, stage.col, stage.row, x, y, CELL, CELL);
+        return;
+      }
+
       const fill = cell.poisoned ? COLORS.capPoison : fillColor;
       const rim = cell.poisoned ? COLORS.capPoison : rimColor;
       const removed = new Set(
@@ -250,19 +261,28 @@ export class Renderer {
     const bodyColor = v.poisoned ? COLORS.poisonedSeg : palette.body;
     const flip = v.dir < 0;
 
+    const custom = getCustomSpriteSheet();
+    const customFrames = v.isHead ? custom?.mapping.centipedeHead?.frames : custom?.mapping.centipedeBody?.frames;
+    if (custom && customFrames && customFrames.length > 0) {
+      const frame = pickFrame(customFrames, this.frame);
+      custom.sheet.draw(this.ctx, frame.col, frame.row, cx - 8, cy - 4, 16, 8, flip);
+      return;
+    }
+
     renderMask(this.putPixel, CENTIPEDE_MASK, cx, cy, { F: bodyColor }, flip);
 
-    // Legs cycle their horizontal position (a "conveyor belt" effect along
-    // the body) rather than flapping up and down, stepping at a fast,
-    // slightly-jumpy cadence like the original's frame-by-frame animation.
+    // Legs poke out just past the body's edges (now ~8px wide, matching
+    // the mushroom/grid scale) and cycle their horizontal position (a
+    // "conveyor belt" effect along the body) at a fast, slightly-jumpy
+    // cadence like the original's frame-by-frame animation.
     const legShift = Math.floor(this.frame / 4) % 2;
-    this.rect(cx - 7 + legShift, cy - 4, 1, 1, palette.legs);
-    this.rect(cx + 1 + legShift, cy - 4, 1, 1, palette.legs);
-    this.rect(cx - 3 + legShift, cy + 3, 1, 1, palette.legs);
-    this.rect(cx + 5 + legShift, cy + 3, 1, 1, palette.legs);
+    this.rect(cx - 5 + legShift, cy - 4, 1, 1, palette.legs);
+    this.rect(cx + 4 + legShift, cy - 4, 1, 1, palette.legs);
+    this.rect(cx - 5 + legShift, cy + 3, 1, 1, palette.legs);
+    this.rect(cx + 4 + legShift, cy + 3, 1, 1, palette.legs);
 
     if (v.isHead) {
-      const eyeDx = flip ? -3 : 3;
+      const eyeDx = flip ? -2 : 2;
       this.rect(cx + eyeDx - 1, cy - 1, 1, 1, palette.eyes);
       this.rect(cx + eyeDx + 1, cy - 1, 1, 1, palette.eyes);
     }
@@ -270,16 +290,31 @@ export class Renderer {
 
   private drawSpider(spider: NonNullable<Game['spider']>): void {
     const { cx, cy } = this.center(spider.x, spider.y);
-    for (const [dx, dy] of [
-      [-7, -2], [7, -2], [-8, 1], [8, 1], [-6, 3], [6, 3], [-5, -3], [5, -3],
-    ] as const) {
-      this.rect(cx + dx, cy + dy, 2, 1, COLORS.spiderLeg);
+
+    const custom = getCustomSpriteSheet();
+    if (custom?.mapping.spider?.frames.length) {
+      const frame = pickFrame(custom.mapping.spider.frames, this.frame);
+      custom.sheet.draw(this.ctx, frame.col, frame.row, cx - 8, cy - 4, 16, 8);
+      return;
     }
-    renderMask(this.putPixel, SPIDER_MASK, cx, cy, { F: COLORS.spiderBody });
+
+    renderMask(this.putPixel, pickMaskFrame(SPIDER_FRAMES, this.frame), cx, cy, {
+      F: COLORS.spiderBody,
+      D: COLORS.spiderCenter,
+      L: COLORS.spiderLeg,
+    });
   }
 
   private drawFlea(flea: NonNullable<Game['flea']>): void {
     const { cx, cy } = this.center(flea.col, flea.y);
+
+    const custom = getCustomSpriteSheet();
+    if (custom?.mapping.flea?.frames.length) {
+      const frame = pickFrame(custom.mapping.flea.frames, this.frame);
+      custom.sheet.draw(this.ctx, frame.col, frame.row, cx - 8, cy - 4, 16, 8);
+      return;
+    }
+
     renderMask(this.putPixel, FLEA_MASK, cx, cy, { F: COLORS.flea });
     const wingPhase = (this.frame >> 2) % 2 === 0;
     this.rect(cx - 4, cy + (wingPhase ? -1 : 1), 1, 2, COLORS.flea);
@@ -288,8 +323,16 @@ export class Renderer {
 
   private drawScorpion(scorpion: NonNullable<Game['scorpion']>): void {
     const { cx, cy } = this.center(scorpion.x, scorpion.row);
+
+    const custom = getCustomSpriteSheet();
+    if (custom?.mapping.scorpion?.frames.length) {
+      const frame = pickFrame(custom.mapping.scorpion.frames, this.frame);
+      custom.sheet.draw(this.ctx, frame.col, frame.row, cx - 8, cy - 4, 16, 8, scorpion.dir < 0);
+      return;
+    }
+
     renderMask(this.putPixel, SCORPION_MASK, cx, cy, { F: COLORS.scorpion, D: COLORS.scorpionTail }, scorpion.dir < 0);
-    const pincerDx = scorpion.dir >= 0 ? 7 : -7;
+    const pincerDx = scorpion.dir >= 0 ? 5 : -5;
     this.rect(cx + pincerDx, cy - 2, 2, 2, COLORS.scorpion);
   }
 
@@ -301,6 +344,14 @@ export class Renderer {
 
   private drawShooter(shooter: Game['shooter'], color: string): void {
     const { cx, cy } = this.center(shooter.x, shooter.y);
+
+    const custom = getCustomSpriteSheet();
+    if (custom?.mapping.shooter) {
+      const cell = custom.mapping.shooter;
+      custom.sheet.draw(this.ctx, cell.col, cell.row, cx - 8, cy - 4, 16, 8);
+      return;
+    }
+
     this.drawDiamond(cx, cy, 3, color);
   }
 
@@ -427,4 +478,8 @@ export class Renderer {
 
 function pad(n: number, digits: number): string {
   return Math.floor(Math.max(0, n)).toString().padStart(digits, '0');
+}
+
+function pickMaskFrame(frames: Mask[], frameCounter: number, stepEveryNFrames = 4): Mask {
+  return frames[Math.floor(frameCounter / stepEveryNFrames) % frames.length];
 }

@@ -16,39 +16,132 @@
 
 export type Mask = string[];
 
-/** Centipede body/head segment — a rounded pill; legs and eyes are drawn separately so they can animate. */
+/**
+ * Centipede body/head segment — a rounded bead held to a consistent ~8px
+ * width (matching the mushroom tile's 8x8 scale) rather than flaring out
+ * to fill the full 16px motion-object slot. Segments step exactly one grid
+ * cell (8px) apart, so an 8px-wide body sits edge-to-edge with its
+ * neighbors — connected, but each link still individually visible —
+ * instead of overlapping into one undifferentiated tube. Legs and eyes
+ * are drawn separately so they can animate.
+ */
 export const CENTIPEDE_MASK: Mask = [
   '................',
+  '................',
+  '.....FFFFFF.....',
   '....FFFFFFFF....',
-  '..FFFFFFFFFFFF..',
-  '.FFFFFFFFFFFFFF.',
-  '.FFFFFFFFFFFFFF.',
-  '..FFFFFFFFFFFF..',
   '....FFFFFFFF....',
+  '....FFFFFFFF....',
+  '.....FFFFFF.....',
   '................',
 ];
 
-/** Spider — a bulbous rounded body; the spindly legs are drawn separately. */
-export const SPIDER_MASK: Mask = [
-  '................',
-  '......FFFF......',
-  '....FFFFFFFF....',
-  '...FFFFFFFFFF...',
-  '...FFFFFFFFFF...',
-  '....FFFFFFFF....',
-  '......FFFF......',
-  '................',
+/**
+ * Spider walk cycle.
+ *
+ * The local reference sheet shows the spider as a low, wide 16x8 motion
+ * object: pale legs arcing around a red/green center, alternating between
+ * high-arched and flattened leg poses. These are original redraws built for
+ * this mask system from that silhouette and cadence.
+ */
+export const SPIDER_FRAMES: Mask[] = [
+  [
+    'L....L....L....L',
+    'LL...L....L...LL',
+    '.L..LDDDDDDL..L.',
+    'LL..DDFDDFDD..LL',
+    '...DDFFFFFDD....',
+    'LL..DDFDDFDD..LL',
+    '.L..LLFFFFLL..L.',
+    'L....L....L....L',
+  ],
+  [
+    '................',
+    'LLL..L....L..LLL',
+    'L..LLDDDDDDLL..L',
+    '...DDFDDFDD.....',
+    'LL.DDFFFFFDD.LL.',
+    '...DDFDDFDD.....',
+    'L..LLFFFFFLL..L.',
+    'LLL..L....L..LLL',
+  ],
+  [
+    'L..............L',
+    'LLL..L....L..LLL',
+    '..LLLDDDDDLLL...',
+    'L..DDFDDFDD..L..',
+    'LL.DDFFFFFDD.LL.',
+    '...DDFDDFDD.....',
+    '..LLLFFFFLLL....',
+    'L..............L',
+  ],
+  [
+    '................',
+    '....LL....LL....',
+    'LLL..DDDDDD..LLL',
+    '...DDFDDFDD.....',
+    'L..DDFFFFFDD..L.',
+    'LL.DDFDDFDD.LL..',
+    '..LLLFFFFLLL....',
+    '....LL....LL....',
+  ],
+  [
+    'L....L....L....L',
+    'LL...L....L...LL',
+    '.L..LDDDDDDL..L.',
+    'LL..DDFDDFDD..LL',
+    '...DDFFFFFDD....',
+    'LL..DDFDDFDD..LL',
+    '.L..LLFFFFLL..L.',
+    'L....L....L....L',
+  ],
+  [
+    '................',
+    'LLL..L....L..LLL',
+    'L..LLDDDDDDLL..L',
+    '...DDFDDFDD.....',
+    'LL.DDFFFFFDD.LL.',
+    '...DDFDDFDD.....',
+    'L..LLFFFFFLL..L.',
+    'LLL..L....L..LLL',
+  ],
+  [
+    '....L......L....',
+    '..LLL......LLL..',
+    'LL..LDDDDDDL..LL',
+    'L..DDFDDFDD..L..',
+    '...DDFFFFFDD....',
+    'L..DDFDDFDD..L..',
+    'LL..LFFFFFL..LL.',
+    '..LLL......LLL..',
+  ],
+  [
+    '................',
+    '..LLL......LLL..',
+    'LL..LDDDDDDL..LL',
+    '....DDFDDFDD....',
+    'L..DDFFFFFDD..L.',
+    'LL.DDFDDFDD.LL..',
+    '..LLLFFFFLLL....',
+    '................',
+  ],
 ];
 
-/** Scorpion — elongated body with a curled tail (D) at the back and small tail-fin nubs. */
+export const SPIDER_MASK: Mask = SPIDER_FRAMES[0];
+
+/**
+ * Scorpion — elongated body with a curled tail (D) at the back and small
+ * tail-fin nubs. Body width trimmed to ~10px (was flaring to 14px) so it
+ * reads closer to the mushroom/grid scale instead of oversized.
+ */
 export const SCORPION_MASK: Mask = [
-  '....DD..........',
-  '...D..D.........',
+  '...DD...........',
+  '..D..D..........',
+  '...FFFFFFFFFF...',
   '..FFFFFFFFFFFF..',
-  '.FFFFFFFFFFFFFF.',
-  '.FFFFFFFFFFFFFF.',
   '..FFFFFFFFFFFF..',
-  '...FF....FF.....',
+  '...FFFFFFFFFF...',
+  '....FF....FF....',
   '................',
 ];
 
