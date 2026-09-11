@@ -136,6 +136,12 @@ Fetched and cross-checked this session (see citations in `config.ts` /
   overridden) the existing "1/8 second per link" decay rate: the ROM
   reduces its cooldown by 8 raw frames per link, matching within
   rounding.
+- **Flea's "low mushroom" counting zone**: `MUSHDC`/`MUSHER` ($2b95/
+  $2bac) show the ROM's own mushroom-count-for-flea-eligibility spans
+  rows 2-11, narrower than the manual's general "infield" zone (rows
+  1-12) that `countInfield()` was reusing. Added a dedicated
+  `LOW_MUSHROOM_ZONE_MAX_ROW` for the flea check and left the general
+  infield zone constant (used for other purposes) untouched.
 
 ## Behaviors kept from the Video Master's Guide (not overridden)
 

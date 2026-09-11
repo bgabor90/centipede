@@ -96,9 +96,9 @@ export class MushroomField {
     }
   }
 
-  countInfield(): number {
+  countInfield(maxRow: number = ZONES.INFIELD_MAX_ROW): number {
     let count = 0;
-    for (let r = 0; r < ZONES.INFIELD_MAX_ROW; r++) {
+    for (let r = 0; r < maxRow; r++) {
       for (let c = 0; c < GRID.COLS; c++) {
         if (this.cells[r][c]) count++;
       }

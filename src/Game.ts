@@ -533,7 +533,7 @@ export class Game {
     const firstWaveOfCycle = this.currentWave.compositionIndex0 === 0;
     if (firstWaveOfCycle || this.scorpion) return;
 
-    if (this.mushrooms.countInfield() >= this.requiredInfieldMushrooms()) return;
+    if (this.mushrooms.countInfield(FLEA.LOW_MUSHROOM_ZONE_MAX_ROW) >= this.requiredInfieldMushrooms()) return;
 
     this.fleaAllowedTimer -= dt;
     if (this.fleaAllowedTimer <= 0) {

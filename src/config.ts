@@ -102,6 +102,12 @@ export const FLEA = {
   // hit instead of re-escalating.
   HIT_ESCALATED_SPEED: 30,
   SHOTS_TO_KILL: 2,
+  // VERIFIED (MUSHDC/MUSHER, $2b95/$2bac): the ROM's own "low-screen
+  // mushroom" counter that gates flea spawning spans rows 2-11 (row 1
+  // never holds a mushroom to begin with) -- narrower than the manual's
+  // broader "infield" zone (rows 1-12, ZONES.INFIELD_MAX_ROW), which is
+  // a distinct, correct concept used elsewhere and left unchanged.
+  LOW_MUSHROOM_ZONE_MAX_ROW: 11,
   MIN_INFIELD_MUSHROOMS_BY_SCORE: [
     { upTo: 20_000, count: 5 },
     { upTo: 120_000, count: 9 },
