@@ -732,12 +732,15 @@ export class Game {
     this.buildTallyQueue();
     this.tallyHighlight = null;
     this.state = 'LIFE_LOST_TALLY';
-    // VERIFIED (ExplodePlayer, $2cc8): death sets a 48-frame (~0.8s) pause
-    // immediately, and RestoreShroom explicitly refuses to tally while the
-    // player's explosion sound is still playing. Seeding the tally timer
-    // with that pause (instead of 0) keeps the mushroom credits from
-    // starting to tick before the death explosion has had a moment to play.
-    this.tallyTimer = 48 / 60;
+    // VERIFIED (UpdateExplosions, $2701-$2744): a prior pass gated this on
+    // ExplodePlayer's delay_ctr=48, a *different*, unrelated pause used
+    // elsewhere (blocks centipede movement/new heads). The actual gate on
+    // the tally itself is the player's own explosion picture sequence --
+    // it steps through 8 explosion frames ($20-$27) at 4 frames each (32
+    // frames total, ~0.53s) and only *then* initializes the mushroom
+    // pointer RestoreShroom needs to do anything at all ("If the mushroom
+    // pointer is zero, this does nothing"). Corrected 48/60 to 32/60.
+    this.tallyTimer = 32 / 60;
   }
 
   private buildTallyQueue(): void {

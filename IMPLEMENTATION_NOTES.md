@@ -160,13 +160,18 @@ Fetched and cross-checked this session (see citations in `config.ts` /
   `bonusLivesAwarded` (the next-threshold tracker) every time a threshold
   is crossed regardless of whether the cap blocks the actual life, matching
   the ROM's unconditional threshold-tracker update.
-- **Pre-tally death pause**: `ExplodePlayer` ($2cc8) sets a 48-frame
-  (~0.8s) pause immediately on death, and `RestoreShroom` explicitly
-  refuses to tally mushrooms while the player's explosion sound is still
-  playing. `killPlayer()` seeded the tally timer with 0, starting the
-  mushroom-credit ticks with no delay at all. Also re-verified (already
-  correct, no change) the wave-color palette table byte-for-byte against
-  the raw `:colors` listing at $267a.
+- **Pre-tally death pause**: corrected twice. First pass gated this on
+  `ExplodePlayer`'s `delay_ctr=48` (~0.8s), reasoning from `RestoreShroom`'s
+  "player busily exploding?" check. Reading `UpdateExplosions`
+  ($2701-$2744) directly afterward showed that's the wrong mechanism:
+  `delay_ctr` is a different, unrelated pause (blocks centipede movement/
+  new heads); the tally's actual gate is the player's own 8-frame
+  explosion picture sequence ($20-$27 at 4 frames each, 32 frames total,
+  ~0.53s), which is what initializes the mushroom pointer `RestoreShroom`
+  needs to do anything at all. Corrected the seeded tally timer from
+  48/60 to 32/60. Also re-verified (already correct, no change) the
+  wave-color palette table byte-for-byte against the raw `:colors`
+  listing at $267a.
 - **Shot muzzle offset**: `InitPlayer` ($2936) positions the shot exactly
   4 raw units (0.5 cells) above the player's own position ("sticks out
   of gun"). We used 0.4 -- corrected to 0.5.
