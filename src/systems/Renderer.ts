@@ -7,7 +7,7 @@ import { getWavePalette } from './Palette';
 import {
   CENTIPEDE_BODY_FRAMES,
   CENTIPEDE_HEAD_FRAMES,
-  FLEA_MASK,
+  FLEA_FRAMES,
   MUSHROOM_STAGES,
   POISONED_MUSHROOM_STAGES,
   SCORPION_MASK,
@@ -44,7 +44,10 @@ const COLORS = {
   spiderCenter: '#ff1a0d',
   shooterBody: '#fffbc0',
   shooterDetail: '#ff1a0d',
-  flea: '#ff3c6e',
+  // Sampled from the reference sheet's flea row.
+  fleaBody: '#fffdc8',
+  fleaHead: '#ea3323',
+  fleaLeg: '#75fb4c',
   scorpion: '#ffb02e',
   scorpionTail: '#cc6a12',
   shot: '#ff3333',
@@ -322,10 +325,11 @@ export class Renderer {
       return;
     }
 
-    renderMask(this.putPixel, FLEA_MASK, cx, cy, { F: COLORS.flea });
-    const wingPhase = (this.frame >> 2) % 2 === 0;
-    this.rect(cx - 4, cy + (wingPhase ? -1 : 1), 1, 2, COLORS.flea);
-    this.rect(cx + 3, cy + (wingPhase ? 1 : -1), 1, 2, COLORS.flea);
+    renderMask(this.putPixel, pickMaskFrame(FLEA_FRAMES, this.frame), cx, cy, {
+      H: COLORS.fleaBody,
+      D: COLORS.fleaHead,
+      F: COLORS.fleaLeg,
+    });
   }
 
   private drawScorpion(scorpion: NonNullable<Game['scorpion']>): void {

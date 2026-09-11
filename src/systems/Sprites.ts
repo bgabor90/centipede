@@ -393,17 +393,55 @@ export const SCORPION_MASK: Mask = [
   '................',
 ];
 
-/** Flea — a narrow bomb/capsule shape, since it drops straight down rather than moving horizontally. */
-export const FLEA_MASK: Mask = [
-  '......FF........',
-  '.....FFFF.......',
-  '.....FFFF.......',
-  '....FFFFFF......',
-  '....FFFFFF......',
-  '.....FFFF.......',
-  '.....FFFF.......',
-  '......FF........',
+/**
+ * Flea leg-scuttle cycle, sampled from the four-frame flea row in the local
+ * reference sheet. `H` is the pale cream body, `D` is the red head, and `F`
+ * is the green legs, which are the only part that animates across frames.
+ */
+export const FLEA_FRAMES: Mask[] = [
+  [
+    '......HHH.......',
+    '.....DHHHH......',
+    '....DDHHHHH.....',
+    '...HHHHHHHHH....',
+    '...HHHF.FHHH....',
+    '......F.F.HH....',
+    '......F.F.F.....',
+    '.....F.F...F....',
+  ],
+  [
+    '......HHH.......',
+    '.....DHHHH......',
+    '....DDHHHHH.....',
+    '...HHHHHHHHH....',
+    '...HHH.F.HHH....',
+    '......F..FHH....',
+    '.....F..F..F....',
+    '.....F.F..F.....',
+  ],
+  [
+    '......HHH.......',
+    '.....DHHHH......',
+    '....DDHHHHH.....',
+    '...HHHHHHHHH....',
+    '...HHH.F.HHH....',
+    '......F.F.HH....',
+    '......F..F.F....',
+    '.......F..F.....',
+  ],
+  [
+    '......HHH.......',
+    '.....DHHHH......',
+    '....DDHHHHH.....',
+    '...HHHHHHHHH....',
+    '...HHHF.FHHH....',
+    '......F.F.HH....',
+    '......F..F.F....',
+    '.......F.F.F....',
+  ],
 ];
+
+export const FLEA_MASK: Mask = FLEA_FRAMES[0];
 
 /**
  * Shooter / player "bug blaster".
