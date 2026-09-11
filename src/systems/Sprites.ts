@@ -378,20 +378,55 @@ export const SPIDER_FRAMES: Mask[] = [
 export const SPIDER_MASK: Mask = SPIDER_FRAMES[0];
 
 /**
- * Scorpion — elongated body with a curled tail (D) at the back and small
- * tail-fin nubs. Body width trimmed to ~10px (was flaring to 14px) so it
- * reads closer to the mushroom/grid scale instead of oversized.
+ * Scorpion tail-curl cycle, sampled from the four-frame scorpion row in the
+ * local reference sheet. `H` is the pale cream body and legs, `D` is the
+ * red pincers up top. The curled tail is the part that animates across
+ * frames.
  */
-export const SCORPION_MASK: Mask = [
-  '...DD...........',
-  '..D..D..........',
-  '...FFFFFFFFFF...',
-  '..FFFFFFFFFFFF..',
-  '..FFFFFFFFFFFF..',
-  '...FFFFFFFFFF...',
-  '....FF....FF....',
-  '................',
+export const SCORPION_FRAMES: Mask[] = [
+  [
+    'H.H..DHD..H.H...',
+    '.H..DDHDD..H....',
+    '.HH..HHH..HH.HHH',
+    '..HHHHHHHHH..H.H',
+    '.....HHHH......H',
+    '.....HHHH.....HH',
+    '.....HHHHHHHHHHH',
+    '......HHHHHHHHH.',
+  ],
+  [
+    'H.H..DHD..H.H...',
+    '.H..DDHDD..H....',
+    '.HH..HHH..HH.HHH',
+    '..HH.HHH.HH..H.H',
+    '...HHHHHHH...H..',
+    '.....HHH....HH..',
+    '.....HHHHHHHHH..',
+    '......HHHHHHH...',
+  ],
+  [
+    'H.H.DHD.H.H.....',
+    '.H.DDHDD.H......',
+    '.HH.HHH.HH....HH',
+    '..HHHHHHH....H.H',
+    '....HHH.....HH.H',
+    '....HHH...HHH..H',
+    '....HHHHHHHH..H.',
+    '.....HHHHHH.....',
+  ],
+  [
+    'H.H.DHD.H.H.....',
+    '.H.DDHDD.H..H...',
+    '.HH.HHH.HH.H.HH.',
+    '..HHHHHHH..H..HH',
+    '....HHH.....H..H',
+    '....HHH........H',
+    '....HHHHHHHHHHHH',
+    '.....HHHHHHHHHH.',
+  ],
 ];
+
+export const SCORPION_MASK: Mask = SCORPION_FRAMES[0];
 
 /**
  * Flea leg-scuttle cycle, sampled from the four-frame flea row in the local

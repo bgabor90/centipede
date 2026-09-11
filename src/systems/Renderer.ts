@@ -10,7 +10,7 @@ import {
   FLEA_FRAMES,
   MUSHROOM_STAGES,
   POISONED_MUSHROOM_STAGES,
-  SCORPION_MASK,
+  SCORPION_FRAMES,
   SHOOTER_MASK,
   SPIDER_FRAMES,
   PLAYER_DEATH_EXPLOSION_FRAMES,
@@ -48,8 +48,9 @@ const COLORS = {
   fleaBody: '#fffdc8',
   fleaHead: '#ea3323',
   fleaLeg: '#75fb4c',
-  scorpion: '#ffb02e',
-  scorpionTail: '#cc6a12',
+  // Sampled from the reference sheet's scorpion row.
+  scorpionBody: '#fffdc8',
+  scorpionPincer: '#ea3323',
   shot: '#ff3333',
   tallyFlash: '#ffffff',
   // Sampled from the reference sheet's explosion-burst row.
@@ -342,9 +343,18 @@ export class Renderer {
       return;
     }
 
-    renderMask(this.putPixel, SCORPION_MASK, cx, cy, { F: COLORS.scorpion, D: COLORS.scorpionTail }, scorpion.dir < 0);
-    const pincerDx = scorpion.dir >= 0 ? 5 : -5;
-    this.rect(cx + pincerDx, cy - 2, 2, 2, COLORS.scorpion);
+    // Traced as-is (unflipped), the reference art's pincers lead on the
+    // left with the tail trailing right -- i.e. it's drawn facing left, the
+    // opposite of the shot/centipede/flea convention of "unflipped faces
+    // right". So this mirrors on rightward movement instead of leftward.
+    renderMask(
+      this.putPixel,
+      pickMaskFrame(SCORPION_FRAMES, this.frame),
+      cx,
+      cy,
+      { H: COLORS.scorpionBody, D: COLORS.scorpionPincer },
+      scorpion.dir >= 0
+    );
   }
 
   private drawPlayerExplosion(game: Game): void {
