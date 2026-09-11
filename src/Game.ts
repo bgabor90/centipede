@@ -284,11 +284,19 @@ export class Game {
       this.emit('fire');
     }
 
-    this.updateShot(dt);
+    // VERIFIED (MainLoop, $2031-$2055): the real per-frame order is
+    // MoveCentipede, MovePlayer, MoveSpider, UpdateShot, then MoveScorpion,
+    // MoveFlea -- so the shot's collision check sees the centipede and
+    // spider at their already-moved current-frame position, but the
+    // scorpion and flea at their not-yet-moved position from last frame.
+    // Our shot used to run first, checking a stale, one-frame-old spider
+    // position against a freshly-advanced shot -- a real contributor to
+    // shots visibly passing through the spider.
     this.updateCentipede(dt);
     this.updateSpider(dt);
-    this.updateFlea(dt);
+    this.updateShot(dt);
     this.updateScorpion(dt);
+    this.updateFlea(dt);
     this.updateSideFeed(dt);
     this.checkShooterCollisions();
 
@@ -344,11 +352,11 @@ export class Game {
       this.shot = new Shot(this.shooter.col, this.shooter.y + 0.4, this.shooter.x);
     }
 
-    this.updateShot(dt);
     this.updateCentipede(dt);
     this.updateSpider(dt);
-    this.updateFlea(dt);
+    this.updateShot(dt);
     this.updateScorpion(dt);
+    this.updateFlea(dt);
     this.updateSideFeed(dt);
 
     if (this.centipede.isWaveClear && !this.justClearedWave) {
@@ -398,7 +406,11 @@ export class Game {
         return;
       }
 
-      if (this.flea && Math.round(this.flea.row) === r && this.flea.col === col) {
+      // Distance-tolerance checks (matching the centipede's own 0.6-cell
+      // hit radius above) instead of exact-rounded-position equality --
+      // the latter could let a fast-moving target's true position fall
+      // between two swept rows/columns and never register a hit at all.
+      if (this.flea && Math.abs(this.flea.y - r) <= 0.6 && this.flea.col === col) {
         const killed = this.flea.registerHit();
         this.emit(killed ? 'fleaKilled' : 'fleaHit');
         if (killed) {
@@ -409,7 +421,7 @@ export class Game {
         return;
       }
 
-      if (this.scorpion && this.scorpion.row === r && this.scorpion.col === col) {
+      if (this.scorpion && this.scorpion.row === r && Math.abs(this.scorpion.x - col) <= 0.6) {
         this.addScore(SCORING.SCORPION);
         this.emit('scorpionHit', SCORING.SCORPION);
         this.scorpion = null;
@@ -417,7 +429,7 @@ export class Game {
         return;
       }
 
-      if (this.spider && Math.round(this.spider.row) === r && this.spider.col === col) {
+      if (this.spider && Math.abs(this.spider.y - r) <= 0.6 && Math.abs(this.spider.x - col) <= 0.6) {
         // VERIFIED: the ROM's spider-kill scoring compares vertical
         // distance only (mobj_vert_spdr - mobj_vert_plyr) -- horizontal
         // offset isn't part of the calculation.
@@ -613,16 +625,38 @@ export class Game {
   // Shooter collisions (death)
   // ---------------------------------------------------------------------
 
+  // VERIFIED (ChkPlyrColl, $2c9a in the Rev4 disassembly, read from the raw
+  // listing): the real player-death hitbox is not a simple radius. It's a
+  // per-axis pre-filter (reject outright if either axis alone is too far)
+  // followed by a combined Manhattan-sum threshold, and the spider gets a
+  // wider horizontal allowance ("spider is wide" per the source comment).
+  // Raw thresholds (converted at 8px/cell): horizontal <7 units (<10 for
+  // the spider), vertical <7 units, summed distance <12 (<14 for the
+  // spider). Replaces box/circular tolerances (0.55/0.6/exact-match) that
+  // were all noticeably tighter than the real hitbox -- our shooter was
+  // surviving near-misses the original game would have killed it for.
+  private touchesPlayer(dCol: number, dRow: number, isSpider: boolean): boolean {
+    const horizLimit = isSpider ? 1.25 : 0.875;
+    const vertLimit = 0.875;
+    const sumLimit = isSpider ? 1.75 : 1.5;
+    const ax = Math.abs(dCol);
+    const ay = Math.abs(dRow);
+    if (ax >= horizLimit || ay >= vertLimit) return false;
+    return ax + ay < sumLimit;
+  }
+
   private checkShooterCollisions(): void {
     if (this.features.godMode) return;
     const sx = this.shooter.x;
     const sy = this.shooter.y;
 
-    if (this.centipede.collidesWithCell(sy, sx, 0.55)) return this.killPlayer();
-    if (this.spider && Math.hypot(this.spider.row - sy, this.spider.col - sx) < 0.6) return this.killPlayer();
-    if (this.flea && Math.round(this.flea.row) === Math.round(sy) && this.flea.col === Math.round(sx)) {
-      return this.killPlayer();
+    for (const chain of this.centipede.chains) {
+      for (const v of chain.getSegmentViews()) {
+        if (this.touchesPlayer(v.col - sx, v.row - sy, false)) return this.killPlayer();
+      }
     }
+    if (this.spider && this.touchesPlayer(this.spider.x - sx, this.spider.y - sy, true)) return this.killPlayer();
+    if (this.flea && this.touchesPlayer(this.flea.col - sx, this.flea.y - sy, false)) return this.killPlayer();
   }
 
   private killPlayer(): void {

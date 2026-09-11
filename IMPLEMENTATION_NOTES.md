@@ -100,6 +100,33 @@ Fetched and cross-checked this session (see citations in `config.ts` /
   regardless of the wave's slow/fast designation. `CentipedeManager`
   previously left a surviving lone segment at whatever speed it already
   had.
+- **Per-frame update order and shot-collision tolerance**: `MainLoop`
+  ($2031-$2055) calls things in a specific order -- MoveCentipede,
+  MovePlayer, MoveSpider, UpdateShot, then MoveScorpion, MoveFlea -- so
+  the shot's collision check sees the centipede/spider at their
+  already-moved current-frame position but the scorpion/flea at their
+  not-yet-moved position from the previous frame. Our `updateShot` ran
+  before `updateSpider`, so it always checked a one-frame-stale spider
+  position against a freshly-advanced shot -- a real cause of shots
+  visibly passing through the spider. Reordered `updatePlaying`/
+  `updateAttractDemo` to match, and replaced the flea/scorpion/spider hit
+  checks' exact-rounded-position equality with the same 0.6-cell
+  proximity tolerance already used for centipede segments, since a
+  fast-moving target's true position can otherwise fall between two
+  swept rows/columns and never register a hit. Verified with randomized
+  simulations tracking true continuous shot-target distance: every case
+  where the two genuinely came within tolerance now results in a hit.
+- **Player-death hitbox**: `ChkPlyrColl` ($2c9a) isn't a simple radius --
+  it's a per-axis pre-filter (reject outright if either axis alone is too
+  far) followed by a combined Manhattan-sum threshold, with the spider
+  given a wider horizontal allowance ("spider is wide" per the source
+  comment). Replaced box/circular/exact-match tolerances (0.55/0.6/exact)
+  that were all noticeably tighter than the real hitbox with the verified
+  thresholds (horizontal <0.875 cells, <1.25 for the spider; vertical
+  <0.875; combined sum <1.5, <1.75 for the spider). Also confirmed the
+  scorpion's own movement routine never calls `ChkPlyrColl` at all --
+  touching it doesn't kill the player, matching the manual (only the
+  spider, flea, and centipede do) and requiring no change there.
 
 ## Behaviors kept from the Video Master's Guide (not overridden)
 
