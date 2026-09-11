@@ -17,6 +17,55 @@
 export type Mask = string[];
 
 /**
+ * Mushroom hit stages, sampled from the local reference sheet's 8x8
+ * mushroom cells. `F` is the main cap/body color, `R` is the second cap
+ * detail color, and `S` is the pale stem/highlight color. The renderer
+ * chooses one stage per mushroom hit count before destruction.
+ */
+export const MUSHROOM_STAGES: Mask[] = [
+  [
+    '.RRFF...',
+    'FRRFFF..',
+    'FFFFFFF.',
+    'FFFFFFF.',
+    'FRRFFF..',
+    '.RRFF...',
+    '...S....',
+    '........',
+  ],
+  [
+    'S.FFF...',
+    '.FFFFF..',
+    'FFFFFFF.',
+    'RRFFFFF.',
+    'RRFFFFF.',
+    '.FRRFF..',
+    '..RRF.S.',
+    '........',
+  ],
+  [
+    '...FF...',
+    'S.FFFF.S',
+    '.FFFFFF.',
+    '.FFFFFF.',
+    '.RRFFRR.',
+    '.RRFFRR.',
+    '..FFFF..',
+    '........',
+  ],
+  [
+    '...FF...',
+    'S.FFFF.S',
+    '.FFFFFF.',
+    '.FFFFFF.',
+    '.FFFFFF.',
+    '.FFFFFF.',
+    '..FFFF..',
+    '........',
+  ],
+];
+
+/**
  * Centipede body/head segment — a rounded bead held to a consistent ~8px
  * width (matching the mushroom tile's 8x8 scale) rather than flaring out
  * to fill the full 16px motion-object slot. Segments step exactly one grid

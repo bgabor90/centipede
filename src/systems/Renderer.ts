@@ -4,7 +4,16 @@ import type { SegmentView } from '../entities/Centipede';
 import type { FeatureFlags } from '../config';
 import { GLYPH_W, drawBitmapText, measureText } from './BitmapFont';
 import { getWavePalette } from './Palette';
-import { CENTIPEDE_MASK, FLEA_MASK, SCORPION_MASK, SHOOTER_MASK, SPIDER_FRAMES, type Mask, renderMask } from './Sprites';
+import {
+  CENTIPEDE_MASK,
+  FLEA_MASK,
+  MUSHROOM_STAGES,
+  SCORPION_MASK,
+  SHOOTER_MASK,
+  SPIDER_FRAMES,
+  type Mask,
+  renderMask,
+} from './Sprites';
 import { getCustomSpriteSheet, pickFrame } from './spriteMapping';
 
 // Verified screen/tile geometry (6502disassembly.com/va-centipede/graphics.html):
@@ -41,35 +50,6 @@ const COLORS = {
   gridLine: 'rgba(255,255,255,0.08)',
   disclaimer: '#3a3a3a',
 } as const;
-
-// 8x8 mushroom mask: a two-tone cap (fill 'F' + a darker rim 'R' outline)
-// over a stem — a rounder, less flat-looking mushroom than a single-color
-// cap. Damage removes cells in `CAP_BITE_ORDER`.
-const MUSHROOM_MASK = [
-  '..RRRR..',
-  '.RFFFFR.',
-  'RFFFFFFR',
-  'RFFFFFFR',
-  '.RFFFFR.',
-  '..SSSS..',
-  '..SSSS..',
-  '........',
-].map((row) => row.split(''));
-
-// Every cap cell (fill or rim), ordered by distance from the top-right
-// corner so damage reads as a bite eating inward from one side, generated
-// from the mask rather than hand-listed.
-const CAP_BITE_ORDER: Array<[number, number]> = (() => {
-  const cells: Array<[number, number]> = [];
-  for (let r = 0; r < MUSHROOM_MASK.length; r++) {
-    for (let c = 0; c < MUSHROOM_MASK[r].length; c++) {
-      if (MUSHROOM_MASK[r][c] !== '.' && MUSHROOM_MASK[r][c] !== 'S') cells.push([r, c]);
-    }
-  }
-  cells.sort((a, b) => a[0] + (7 - a[1]) - (b[0] + (7 - b[1])));
-  return cells;
-})();
-const BITE_CHUNK = Math.ceil(CAP_BITE_ORDER.length / 3);
 
 /**
  * Everything in this renderer is drawn on a hard pixel grid — every fill
@@ -232,19 +212,12 @@ export class Renderer {
       }
 
       const fill = cell.poisoned ? COLORS.capPoison : fillColor;
-      const rim = cell.poisoned ? COLORS.capPoison : rimColor;
-      const removed = new Set(
-        CAP_BITE_ORDER.slice(0, cell.hits * BITE_CHUNK).map(([r, c]) => `${r},${c}`)
-      );
-      for (let r = 0; r < 8; r++) {
-        for (let c = 0; c < 8; c++) {
-          const ch = MUSHROOM_MASK[r][c];
-          if (ch === '.') continue;
-          if ((ch === 'F' || ch === 'R') && removed.has(`${r},${c}`)) continue;
-          const color = ch === 'F' ? fill : ch === 'R' ? rim : COLORS.stem;
-          this.rect(x + c, y + r, 1, 1, color);
-        }
-      }
+      const detail = cell.poisoned ? COLORS.capPoison : rimColor;
+      this.drawTileMask(MUSHROOM_STAGES[Math.min(cell.hits, MUSHROOM_STAGES.length - 1)], x, y, {
+        F: fill,
+        R: detail,
+        S: COLORS.stem,
+      });
     });
   }
 
@@ -358,6 +331,18 @@ export class Renderer {
       F: COLORS.shooterBody,
       D: COLORS.shooterDetail,
     });
+  }
+
+  private drawTileMask(mask: Mask, x: number, y: number, colors: Record<string, string>): void {
+    for (let r = 0; r < 8; r++) {
+      const row = mask[r];
+      for (let c = 0; c < 8; c++) {
+        const ch = row[c];
+        if (ch === '.') continue;
+        const color = colors[ch];
+        if (color) this.rect(x + c, y + r, 1, 1, color);
+      }
+    }
   }
 
   private drawCrtOverlay(): void {
