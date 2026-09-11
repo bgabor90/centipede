@@ -552,8 +552,7 @@ export class Game {
       this.sideFeedSide = this.sideFeedSide === 'left' ? 'right' : 'left';
       const col = this.sideFeedSide === 'left' ? 1 : GRID.COLS;
       const dir = this.sideFeedSide === 'left' ? 1 : -1;
-      const speed = this.currentWave.speed === 'fast' ? CENTIPEDE_SPEED.FAST : CENTIPEDE_SPEED.SLOW;
-      this.centipede.spawnChain(SIDE_FEED.ENTRY_ROW, col, dir as 1 | -1, 1, speed, -1);
+      this.centipede.spawnChain(SIDE_FEED.ENTRY_ROW, col, dir as 1 | -1, 1, CENTIPEDE_SPEED.FAST, -1);
       this.sideFeedLinksThisActivation++;
       const decay = Math.min(this.sideFeedLinksThisActivation, SIDE_FEED.STAGE1_LINK_COUNT) * SIDE_FEED.INTERVAL_DECREASE_STAGE1_MS;
       const interval = Math.max(SIDE_FEED.ABSOLUTE_MIN_INTERVAL_MS, this.sideFeedBaseIntervalMs() - decay);
@@ -676,12 +675,12 @@ export class Game {
   private spawnWave(spec: WaveSpec): void {
     this.justClearedWave = false;
     this.centipede.clear();
-    const speed = spec.speed === 'fast' ? CENTIPEDE_SPEED.FAST : CENTIPEDE_SPEED.SLOW;
+    const mainSpeed = this.score >= WAVE_CYCLE.SLOW_FAST_STOPS_AT_SCORE ? CENTIPEDE_SPEED.FAST : CENTIPEDE_SPEED.SLOW;
     const centerCol = 15 + this.rng.int(0, 1);
 
     if (spec.chainLength > 0) {
       const dir = this.rng.chance(0.5) ? 1 : -1;
-      this.centipede.spawnChain(GRID.ROWS, centerCol, dir as 1 | -1, spec.chainLength, speed, -1);
+      this.centipede.spawnChain(GRID.ROWS, centerCol, dir as 1 | -1, spec.chainLength, mainSpeed, -1);
     }
 
     const usedCols = new Set<number>([centerCol]);
@@ -691,7 +690,7 @@ export class Game {
       while (usedCols.has(col) && guard++ < 60) col = this.rng.int(1, GRID.COLS);
       usedCols.add(col);
       const dir = this.rng.chance(0.5) ? 1 : -1;
-      this.centipede.spawnChain(GRID.ROWS, col, dir as 1 | -1, 1, speed, -1);
+      this.centipede.spawnChain(GRID.ROWS, col, dir as 1 | -1, 1, CENTIPEDE_SPEED.FAST, -1);
     }
 
     this.emit('waveStart');
