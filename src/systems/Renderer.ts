@@ -5,7 +5,8 @@ import type { FeatureFlags } from '../config';
 import { GLYPH_W, drawBitmapText, measureText } from './BitmapFont';
 import { getWavePalette } from './Palette';
 import {
-  CENTIPEDE_FRAMES,
+  CENTIPEDE_BODY_FRAMES,
+  CENTIPEDE_HEAD_FRAMES,
   FLEA_MASK,
   MUSHROOM_STAGES,
   POISONED_MUSHROOM_STAGES,
@@ -241,7 +242,8 @@ export class Renderer {
       return;
     }
 
-    renderMask(this.putPixel, pickMaskFrame(CENTIPEDE_FRAMES, this.frame), cx, cy, {
+    const frames = v.isHead ? CENTIPEDE_HEAD_FRAMES : CENTIPEDE_BODY_FRAMES;
+    renderMask(this.putPixel, pickMaskFrame(frames, this.frame), cx, cy, {
       F: bodyColor,
       D: palette.eyes,
       L: palette.legs,

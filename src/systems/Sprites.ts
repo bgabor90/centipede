@@ -109,11 +109,11 @@ export const POISONED_MUSHROOM_STAGES: Mask[] = [
   ],
 ];
 /**
- * Centipede body/head animation, sampled from the eight-frame row in the
- * centipede reference sheet. `F` is the body, `D` is the red/eye detail, and
- * `L` is the pale leg/highlight that marches across the frames.
+ * Centipede head animation, sampled from the red-detail eight-frame row in
+ * the centipede reference sheet. `F` is the body, `D` is the red/eye detail,
+ * and `L` is the pale leg/highlight that marches across the frames.
  */
-export const CENTIPEDE_FRAMES: Mask[] = [
+export const CENTIPEDE_HEAD_FRAMES: Mask[] = [
   [
     '.......L........',
     '.....DDFF.......',
@@ -196,7 +196,95 @@ export const CENTIPEDE_FRAMES: Mask[] = [
   ],
 ];
 
-export const CENTIPEDE_MASK: Mask = CENTIPEDE_FRAMES[0];
+/**
+ * Centipede body animation, sampled from the matching no-red eight-frame row
+ * in the centipede reference sheet.
+ */
+export const CENTIPEDE_BODY_FRAMES: Mask[] = [
+  [
+    '.......L........',
+    '.....FFFF.......',
+    '....FFFFFF......',
+    '....FFFFFFF.....',
+    '....FFFFFFF.....',
+    '....FFFFFF......',
+    '.....FFFF.......',
+    '.......L........',
+  ],
+  [
+    '........L.......',
+    '.....FFFF.......',
+    '....FFFFFF......',
+    '....FFFFFFF.....',
+    '....FFFFFFF.....',
+    '....FFFFFF......',
+    '.....FFFF.......',
+    '........L.......',
+  ],
+  [
+    '.........L......',
+    '.....FFFF.......',
+    '....FFFFFF......',
+    '....FFFFFFF.....',
+    '....FFFFFFF.....',
+    '....FFFFFF......',
+    '.....FFFF.......',
+    '.........L......',
+  ],
+  [
+    '........L.......',
+    '.....FFFF.......',
+    '....FFFFFF......',
+    '....FFFFFFF.....',
+    '....FFFFFFF.....',
+    '....FFFFFF......',
+    '.....FFFF.......',
+    '........L.......',
+  ],
+  [
+    '.......L........',
+    '.....FFFF.......',
+    '....FFFFFF......',
+    '....FFFFFFF.....',
+    '....FFFFFFF.....',
+    '....FFFFFF......',
+    '.....FFFF.......',
+    '.......L........',
+  ],
+  [
+    '......L.........',
+    '.....FFFF.......',
+    '....FFFFFF......',
+    '....FFFFFFF.....',
+    '....FFFFFFF.....',
+    '....FFFFFF......',
+    '.....FFFF.......',
+    '......L.........',
+  ],
+  [
+    '.....L..........',
+    '.....FFFF.......',
+    '....FFFFFF......',
+    '....FFFFFFF.....',
+    '....FFFFFFF.....',
+    '....FFFFFF......',
+    '.....FFFF.......',
+    '.....L..........',
+  ],
+  [
+    '......L.........',
+    '.....FFFF.......',
+    '....FFFFFF......',
+    '....FFFFFFF.....',
+    '....FFFFFFF.....',
+    '....FFFFFF......',
+    '.....FFFF.......',
+    '......L.........',
+  ],
+];
+
+export const CENTIPEDE_FRAMES: Mask[] = CENTIPEDE_BODY_FRAMES;
+export const CENTIPEDE_MASK: Mask = CENTIPEDE_BODY_FRAMES[0];
 
 /**
  * Spider walk cycle.
