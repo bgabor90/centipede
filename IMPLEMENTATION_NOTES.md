@@ -136,12 +136,30 @@ Fetched and cross-checked this session (see citations in `config.ts` /
   overridden) the existing "1/8 second per link" decay rate: the ROM
   reduces its cooldown by 8 raw frames per link, matching within
   rounding.
-- **Flea's "low mushroom" counting zone**: `MUSHDC`/`MUSHER` ($2b95/
-  $2bac) show the ROM's own mushroom-count-for-flea-eligibility spans
-  rows 2-11, narrower than the manual's general "infield" zone (rows
-  1-12) that `countInfield()` was reusing. Added a dedicated
-  `LOW_MUSHROOM_ZONE_MAX_ROW` for the flea check and left the general
-  infield zone constant (used for other purposes) untouched.
+- **Flea's "low mushroom" counting zone**: corrected twice. First pass
+  read `MUSHDC`/`MUSHER` ($2b95/$2bac) as spanning rows 2-11 (narrower
+  than the manual's general "infield" zone, rows 1-12) and added a
+  dedicated `LOW_MUSHROOM_ZONE_MAX_ROW` for it. The Video Master's
+  Guide's own dedicated table for this exact mechanic ("Preventing the
+  Flea Attack") states plainly: "Mushrooms planted in the infield (i.e.
+  levels 2-12) serve the function of terminating the Flea attack" --
+  conflicting with that reading, which depended on a row-index-to-row-
+  number offset inferred from the raw disassembly, not stated outright.
+  Corrected `LOW_MUSHROOM_ZONE_MAX_ROW` to 12, matching the manual and
+  making it the same zone as the general infield after all.
+- **Investigated and ruled out as a bug**: a "the flea seems to have
+  disappeared" report, after the initial-mushroom-scatter port (see
+  above) started regularly planting ~14 mushrooms in this same zone at
+  the start of a fresh game -- well above the 5-mushroom early-game
+  threshold that suppresses flea spawning. Traced `InitPlay`'s own
+  scatter loop ($2902-$291c) and confirmed it increments the *same*
+  `plyr_low_mush` counter the flea check reads, using the identical zone
+  boundary, for every mushroom it plants there. The real arcade's own
+  initial scatter produces the same high starting count and the same
+  early-game flea suppression -- this is faithful, verified Centipede
+  behavior (a well-known strategic element: fleas are suppressed while
+  the field is mushroom-dense and start appearing as it's cleared), not
+  a regression introduced by the scatter-algorithm port.
 - **Wave-clear pause**: `:IncSpeed` ($3072) sets a ~64-frame (~1.07s)
   `delay_ctr` pause when the last segment of a wave is destroyed, before
   the next wave's centipede appears (`CreateHead` itself also checks
