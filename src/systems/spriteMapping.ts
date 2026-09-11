@@ -47,6 +47,12 @@ export interface SpriteMapping {
     frames: Cell[];
   };
   shooter?: Cell;
+  explosion?: {
+    /** Frames for the player death/explosion animation.
+     * If omitted, fallback art from `Sprites.ts` is used.
+     */
+    frames: Cell[];
+  };
 }
 
 let customSheet: SpriteSheet | null = null;

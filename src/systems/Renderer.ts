@@ -13,6 +13,7 @@ import {
   SCORPION_MASK,
   SHOOTER_MASK,
   SPIDER_FRAMES,
+  PLAYER_DEATH_EXPLOSION_FRAMES,
   type Mask,
   renderMask,
 } from './Sprites';
@@ -48,6 +49,7 @@ const COLORS = {
   scorpionTail: '#cc6a12',
   shot: '#ff3333',
   tallyFlash: '#ffffff',
+  explosion: '#ffae00',
   gridLine: 'rgba(255,255,255,0.08)',
   disclaimer: '#3a3a3a',
 } as const;
@@ -104,6 +106,9 @@ export class Renderer {
     if (game.shot) this.drawShot(game.shot);
     for (const flash of game.killFlashes) this.drawKillFlash(flash);
     if (game.spiderPointsPopup && game.spiderPointsPopup.delay <= 0) this.drawSpiderPointsPopup(game.spiderPointsPopup);
+    if (game.state === 'PLAYER_DEATH_ANIMATION') {
+      this.drawPlayerExplosion(game);
+    }
     if (game.state === 'PLAYING' || game.state === 'ATTRACT' || game.state === 'HIGH_SCORE_ENTRY') {
       this.drawShooter(game.shooter, palette.legs);
     }
@@ -333,6 +338,23 @@ export class Renderer {
     renderMask(this.putPixel, SCORPION_MASK, cx, cy, { F: COLORS.scorpion, D: COLORS.scorpionTail }, scorpion.dir < 0);
     const pincerDx = scorpion.dir >= 0 ? 5 : -5;
     this.rect(cx + pincerDx, cy - 2, 2, 2, COLORS.scorpion);
+  }
+
+  private drawPlayerExplosion(game: Game): void {
+    const pos = game.playerDeathPosition;
+    if (!pos) return;
+
+    const { cx, cy } = this.center(pos.x, pos.y);
+    const custom = getCustomSpriteSheet();
+    if (custom?.mapping.explosion?.frames.length) {
+      const frame = pickFrame(custom.mapping.explosion.frames, this.frame);
+      custom.sheet.draw(this.ctx, frame.col, frame.row, cx - 8, cy - 4, 16, 8);
+      return;
+    }
+
+    renderMask(this.putPixel, pickMaskFrame(PLAYER_DEATH_EXPLOSION_FRAMES, this.frame), cx, cy, {
+      F: COLORS.explosion,
+    });
   }
 
   private drawShot(shot: NonNullable<Game['shot']>): void {

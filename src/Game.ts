@@ -89,6 +89,11 @@ const KILL_FLASH_SECONDS = 6 / 60;
 // display, so this is a tuned, shorter duration -- the exact original
 // hold time isn't independently specified anywhere found.
 const SPIDER_POINTS_POPUP_SECONDS = 1;
+// VERIFIED (UpdateExplosions, $2701-$2744): the player's own explosion
+// picture steps through 8 frames at 4 frames each (32 frames, ~0.53s)
+// before the slot clears -- this is that same window, now rendered as a
+// dedicated PLAYER_DEATH_ANIMATION state instead of a silent delay.
+const PLAYER_DEATH_ANIMATION_SECONDS = 32 / 60;
 const INITIALS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ ';
 
 export class Game {
@@ -143,6 +148,7 @@ export class Game {
   // CalcSpdrPts) at the kill location, rather than just disappearing.
   spiderPointsPopup: { row: number; col: number; text: string; delay: number; timer: number } | null = null;
   private deathTimer = 0;
+  private playerDeathLocation: { x: number; y: number } | null = null;
   private justClearedWave = false;
   // VERIFIED (:IncSpeed, $3072 in the Rev4 disassembly): clearing a wave
   // sets a ~64-frame (~1.07s) pause (`delay_ctr`) before the next wave's
@@ -197,6 +203,7 @@ export class Game {
     this.scatterInitialMushrooms();
     this.centipede.clear();
     this.shot = null;
+    this.playerDeathLocation = null;
     this.spider = null;
     this.flea = null;
     this.scorpion = null;
@@ -232,6 +239,7 @@ export class Game {
     this.scatterAttractMushrooms();
     this.centipede.clear();
     this.shot = null;
+    this.playerDeathLocation = null;
     this.spider = null;
     this.flea = null;
     this.scorpion = null;
@@ -295,6 +303,9 @@ export class Game {
       case 'ATTRACT':
         this.updateAttract(dt);
         break;
+      case 'PLAYER_DEATH_ANIMATION':
+        this.updatePlayerDeathAnimation(dt);
+        break;
       case 'LIFE_LOST_TALLY':
         this.updateTally(dt);
         break;
@@ -308,6 +319,10 @@ export class Game {
 
   private emit(type: GameEventType, points?: number): void {
     this.events.push({ type, points });
+  }
+
+  get playerDeathPosition(): { x: number; y: number } | null {
+    return this.playerDeathLocation;
   }
 
   /** Drains queued events (call once per frame from the render/audio loop). */
@@ -796,18 +811,25 @@ export class Game {
     this.emit('playerDeath');
     this.lives--;
     this.shot = null;
+    this.playerDeathLocation = { x: this.shooter.x, y: this.shooter.y };
+    this.deathTimer = PLAYER_DEATH_ANIMATION_SECONDS;
+    this.shooter.alive = false;
+    this.state = 'PLAYER_DEATH_ANIMATION';
+  }
+
+  private updatePlayerDeathAnimation(dt: number): void {
+    this.deathTimer -= dt;
+    if (this.deathTimer > 0) return;
+
     this.buildTallyQueue();
     this.tallyHighlight = null;
+    // The player's own explosion picture sequence (UpdateExplosions,
+    // $2701-$2744: 8 frames at 4 frames each, ~0.53s) already ran as the
+    // PLAYER_DEATH_ANIMATION state above, so the tally can start crediting
+    // immediately here rather than waiting out that gate a second time.
+    this.tallyTimer = 0;
+    this.playerDeathLocation = null;
     this.state = 'LIFE_LOST_TALLY';
-    // VERIFIED (UpdateExplosions, $2701-$2744): a prior pass gated this on
-    // ExplodePlayer's delay_ctr=48, a *different*, unrelated pause used
-    // elsewhere (blocks centipede movement/new heads). The actual gate on
-    // the tally itself is the player's own explosion picture sequence --
-    // it steps through 8 explosion frames ($20-$27) at 4 frames each (32
-    // frames total, ~0.53s) and only *then* initializes the mushroom
-    // pointer RestoreShroom needs to do anything at all ("If the mushroom
-    // pointer is zero, this does nothing"). Corrected 48/60 to 32/60.
-    this.tallyTimer = 32 / 60;
   }
 
   private buildTallyQueue(): void {

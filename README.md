@@ -128,6 +128,7 @@ to use, you can swap it in without touching the renderer:
      new SpriteSheet('/assets/sprites/my-sheet.png', /* cellWidth */ 16, /* cellHeight */ 8),
      {
        mushroom: { stages: [{ col: 0, row: 0 }, { col: 1, row: 0 } /* ... */] },
+       explosion: { frames: [{ col: 0, row: 2 }, { col: 1, row: 2 } /* ... */] },
        // any field you omit keeps using the built-in art for that sprite
      }
    );

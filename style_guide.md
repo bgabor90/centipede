@@ -98,14 +98,15 @@ Use this path when you want true cabinet-like sprites without changing gameplay 
 3. At startup, call:
 
 ```ts
-setCustomSpriteSheet(
-  new SpriteSheet('/assets/sprites/my-sheet.png', 16, 8),
-  {
-    centipedeHead: { frames: [{ col: 0, row: 0 }] },
-    centipedeBody: { frames: [{ col: 1, row: 0 }, { col: 2, row: 0 }] },
-    mushroom: { stages: [{ col: 0, row: 1 }, { col: 1, row: 1 }, { col: 2, row: 1 }, { col: 3, row: 1 }] },
-    // spider/flea/scorpion/shooter optional
-  }
+    setCustomSpriteSheet(
+      new SpriteSheet('/assets/sprites/my-sheet.png', 16, 8),
+      {
+        centipedeHead: { frames: [{ col: 0, row: 0 }] },
+        centipedeBody: { frames: [{ col: 1, row: 0 }, { col: 2, row: 0 }] },
+        explosion: { frames: [{ col: 0, row: 0 }, { col: 1, row: 0 } /* ... */] },
+        mushroom: { stages: [{ col: 0, row: 1 }, { col: 1, row: 1 }, { col: 2, row: 1 }, { col: 3, row: 1 }] },
+        // spider/flea/scorpion/shooter optional
+      }
 );
 ```
 
