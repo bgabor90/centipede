@@ -132,11 +132,11 @@ export class Renderer {
     this.ctx.fillStyle = color;
     this.ctx.fillRect(Math.round(x), Math.round(y), w, h);
   }
-  private text(str: string, x: number, y: number, color: string, scale = 1): void {
-    drawBitmapText(this.ctx, str, x, y, color, scale);
+  private text(str: string, x: number, y: number, color: string, scale = 1, spacing = 0): void {
+    drawBitmapText(this.ctx, str, x, y, color, scale, spacing);
   }
-  private centeredText(str: string, cx: number, y: number, color: string, scale = 1): void {
-    drawBitmapText(this.ctx, str, cx - measureText(str, scale) / 2, y, color, scale);
+  private centeredText(str: string, cx: number, y: number, color: string, scale = 1, spacing = 0): void {
+    drawBitmapText(this.ctx, str, cx - measureText(str, scale, spacing) / 2, y, color, scale, spacing);
   }
 
   // -- header / footer ------------------------------------------------------
@@ -146,10 +146,10 @@ export class Renderer {
   // columns), height is not.
   private drawHeader(game: Game, textColor: string): void {
     this.text('1UP', 2, 1, textColor);
-    this.text(pad(game.score, 6), 24, 1, textColor);
-    this.centeredText('HIGH SCORE', CANVAS_W / 2, 1, COLORS.hiScore);
+    this.text(pad(game.score, 6), 32, 1, textColor);
+    this.centeredText('HIGH SCORE', CANVAS_W / 2 + CELL, 1, COLORS.hiScore);
     const hiVal = pad(game.highScore, 6);
-    this.text(hiVal, CANVAS_W / 2 + 45, 1, textColor);
+    this.text(hiVal, CANVAS_W / 2 + 56, 1, textColor);
 
     const lives = Math.max(0, game.lives - 1);
     for (let i = 0; i < lives; i++) {
@@ -161,7 +161,7 @@ export class Renderer {
   // here to match, with a small disclaimer only shown outside play.
   private drawFooter(game: Game): void {
     if (game.state === 'ATTRACT' || game.state === 'GAME_OVER') {
-      this.centeredText('FAN-MADE - NOT AN ATARI PRODUCT', CANVAS_W / 2, CANVAS_H - 7, COLORS.disclaimer);
+      this.centeredText('FAN-MADE - NOT AN ATARI PRODUCT', CANVAS_W / 2, CANVAS_H - 7, COLORS.disclaimer, 1, -1);
     }
   }
 
