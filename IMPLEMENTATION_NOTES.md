@@ -601,6 +601,19 @@ the source. (The interval-decay formula and floor this same routine
 governs were already correctly verified in an earlier pass -- see
 `SIDE_FEED` in `config.ts` -- this only touches the side selection.)
 
+## Centipede's main chain always spawns at the literal center column
+
+`InitCentipede` ($2361-$2363 in the Rev4 disassembly) sets the head's
+starting horizontal position with a plain `lda #$80 / sta mobj_horz` --
+a fixed value, no randomization at all. `spawnWave()`'s `centerCol` was
+`15 + rng.int(0, 1)`, an uncommented, unsourced wobble between two
+columns every wave/attract-reset. (Initial direction *is* effectively
+randomized on real hardware -- via whichever bit of the free-running
+frame counter happens to be set at spawn time -- which the existing
+`rng.chance(0.5)` already models correctly; this only removes the
+column wobble.) Fixed to a constant `centerCol = 15`, matching this
+project's own established center-column convention (`SHOOTER.START_COL`).
+
 ## Explicitly approximated (flagged, not verified anywhere)
 
 - Named RGB hex values for each DBGR color (the source names colors, e.g.

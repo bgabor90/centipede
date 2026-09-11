@@ -1028,7 +1028,15 @@ export class Game {
     // it must be the single source of truth here rather than re-deriving
     // speed from the current score directly.
     const chainSpeed = spec.speed === 'fast' ? CENTIPEDE_SPEED.FAST : CENTIPEDE_SPEED.SLOW;
-    const centerCol = 15 + this.rng.int(0, 1);
+    // VERIFIED (InitCentipede, $2361-$2363 in the Rev4 disassembly): the
+    // main chain's head always spawns at the literal fixed center of the
+    // screen ("lda #$80 / sta mobj_horz") -- there's no randomization of
+    // its starting column at all (direction is effectively randomized,
+    // via whatever frame_ctr's bit happens to be at spawn time, which the
+    // existing rng.chance(0.5) below already models correctly). A prior,
+    // uncommented/unsourced `15 + rng.int(0, 1)` wobbled it between two
+    // columns every wave.
+    const centerCol = 15;
 
     if (spec.chainLength > 0) {
       const dir = this.rng.chance(0.5) ? 1 : -1;
