@@ -83,6 +83,19 @@ const TALLY_TICK_SECONDS = 8 / 60;
 // counts down one step per frame from $ff to $f9 (6 steps) before the
 // slot clears -- a brief flash rather than an instant disappearance.
 const KILL_FLASH_SECONDS = 6 / 60;
+// VERIFIED (:NotAttract sets frame_ctr=1 at $2489; AttractMove erases
+// "GAME OVER" when frame_ctr wraps back to 0 at $2133-$2139): the message
+// stays up for 255 frames (256 - 1) before the demo erases it -- not the
+// previous, rounder-but-wrong 2.5s guess.
+const GAME_OVER_MESSAGE_SECONDS = 255 / 60;
+// VERIFIED (main loop, $2023-$202c): GetInitials is checked every frame,
+// right after ChkGameStart/UpdateSound and before AttractMove even runs.
+// UpdateHS (called earlier in the same frame as the "GAME OVER" draw) has
+// already set plyr_hs_init_slot by then, so a qualifying score freezes
+// into initials entry on the very next frame -- "GAME OVER" is visible
+// for about one frame, not the same multi-second hold as a non-qualifying
+// score.
+const GAME_OVER_TO_INITIALS_SECONDS = 1 / 60;
 // Real hardware leaves the point-value graphic up until the spider's
 // motion-object slot is reused for its next spawn (the ~4s respawn gap);
 // showing it that long would read as lingering clutter on a modern
@@ -928,8 +941,10 @@ export class Game {
       // score, never showing "GAME OVER" at all in that case.
       this.resetEntitiesForPostGameDemo();
       this.state = 'GAME_OVER';
-      this.gameOverTimer = 2.5;
       this.gameOverQualifiesForVanityTable = this.qualifiesForVanityTable(this.score);
+      this.gameOverTimer = this.gameOverQualifiesForVanityTable
+        ? GAME_OVER_TO_INITIALS_SECONDS
+        : GAME_OVER_MESSAGE_SECONDS;
       this.emit('gameOver');
       return;
     }

@@ -496,6 +496,31 @@ directly: 90 simulated frames leave the shooter and centipede chain at
 identical positions during `HIGH_SCORE_ENTRY`, while the same 90 frames
 during a non-qualifying `GAME_OVER` move both.
 
+## GAME_OVER holds for its real duration, and skips almost instantly when a high score is earned
+
+Two related timing facts, both read off the exact same `frame_ctr`/
+`GetInitials` machinery used for the two fixes above:
+
+- `:NotAttract` sets `frame_ctr` to 1 the instant "GAME OVER" is drawn
+  ($2487-$2489), and `AttractMove` only erases the message once
+  `frame_ctr` wraps back around to 0 ($2133-$2139) -- 255 frames later,
+  ~4.25s at 60Hz. The project's `gameOverTimer` used a rounder but wrong
+  2.5s guess.
+- For a qualifying score, `GetInitials` (checked every frame, right after
+  `ChkGameStart`/`UpdateSound`, before `AttractMove` even runs -- see the
+  high-score-entry fix above) sees `plyr_hs_init_slot` already set by
+  `UpdateHS` from that same frame, and freezes into initials entry
+  starting the very next frame. "GAME OVER" is visible for about one
+  frame in that case, not the same multi-second hold as a non-qualifying
+  score.
+
+Split `gameOverTimer`'s initial value on `gameOverQualifiesForVanityTable`
+into two new constants, `GAME_OVER_MESSAGE_SECONDS` (255/60) and
+`GAME_OVER_TO_INITIALS_SECONDS` (1/60). Verified directly: simulating a
+non-qualifying game-over takes exactly 256 update frames to return to
+`ATTRACT`, while a qualifying one reaches `HIGH_SCORE_ENTRY` in a single
+frame.
+
 ## Explicitly approximated (flagged, not verified anywhere)
 
 - Named RGB hex values for each DBGR color (the source names colors, e.g.
