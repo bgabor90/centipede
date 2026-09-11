@@ -394,6 +394,20 @@ all three cases leave score unchanged, remove the entity (segment count
 drops, spider/flea become null), and centipede collisions plant no
 mushroom.
 
+## Player-death pause only freezes the centipede, not everything
+
+Only `MoveCentipede` ($2955) and `CreateHead` ($2be1) actually check
+`delay_ctr` -- the spider, flea, scorpion, and the shot are not gated by
+it at all and keep running on real hardware during the pause after a
+death (already correctly modeled this way for the wave-clear pause,
+`updateWaveDelay()`, earlier). The `PLAYER_DEATH_ANIMATION` state added
+in a separate pass routed through a fully exclusive update path that
+froze the entire simulation for its ~32-frame duration instead. Fixed
+`updatePlayerDeathAnimation()` to keep updating spider/flea/scorpion
+while leaving the centipede untouched. Verified directly: centipede head
+position stays frozen through the window while the spider continues
+moving normally.
+
 ## Explicitly approximated (flagged, not verified anywhere)
 
 - Named RGB hex values for each DBGR color (the source names colors, e.g.

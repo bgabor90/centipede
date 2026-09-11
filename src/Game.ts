@@ -837,7 +837,16 @@ export class Game {
     this.state = 'PLAYER_DEATH_ANIMATION';
   }
 
+  // VERIFIED (MoveCentipede $2955, CreateHead $2be1): only the centipede's
+  // own movement and new-head creation actually check `delay_ctr` --
+  // spider, flea, scorpion, and the shot are not gated by it at all and
+  // keep running during this pause on real hardware. This previously
+  // routed through a fully separate state that froze everything.
   private updatePlayerDeathAnimation(dt: number): void {
+    this.updateSpider(dt);
+    this.updateFlea(dt);
+    this.updateScorpion(dt);
+
     this.deathTimer -= dt;
     if (this.deathTimer > 0) return;
 
