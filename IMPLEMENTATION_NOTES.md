@@ -167,6 +167,9 @@ Fetched and cross-checked this session (see citations in `config.ts` /
   mushroom-credit ticks with no delay at all. Also re-verified (already
   correct, no change) the wave-color palette table byte-for-byte against
   the raw `:colors` listing at $267a.
+- **Shot muzzle offset**: `InitPlayer` ($2936) positions the shot exactly
+  4 raw units (0.5 cells) above the player's own position ("sticks out
+  of gun"). We used 0.4 -- corrected to 0.5.
 
 ## Behaviors kept from the Video Master's Guide (not overridden)
 

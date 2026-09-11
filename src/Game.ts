@@ -289,7 +289,7 @@ export class Game {
     this.shooter.moveToward(input.targetX, input.targetY, dt, this.mushrooms, input.instantMove);
 
     if (input.firing && !this.shot) {
-      this.shot = new Shot(this.shooter.col, this.shooter.y + 0.4, this.shooter.x);
+      this.shot = new Shot(this.shooter.col, this.shooter.y + 0.5, this.shooter.x);
       this.emit('fire');
     }
 
@@ -359,7 +359,7 @@ export class Game {
     // the frames it's unarmed -- effectively firing again almost the
     // instant the previous shot resolves, rather than on a fixed cadence.
     if (!this.shot && this.rng.chance(0.5)) {
-      this.shot = new Shot(this.shooter.col, this.shooter.y + 0.4, this.shooter.x);
+      this.shot = new Shot(this.shooter.col, this.shooter.y + 0.5, this.shooter.x);
     }
 
     this.updateCentipede(dt);
