@@ -112,8 +112,6 @@ export class Renderer {
     // wins over board elements here, not the other way around.
     if (game.state === 'ATTRACT') this.drawAttractOverlay(game);
 
-    this.drawFooter(game);
-
     if (features.crtFilter) this.drawCrtOverlay();
     if (game.state === 'GAME_OVER') this.drawGameOver();
     if (game.state === 'HIGH_SCORE_ENTRY') this.drawHighScoreEntry(game);
@@ -175,14 +173,6 @@ export class Renderer {
     }
 
     this.text(pad(game.highScore, 6), 108, 0, textColor);
-  }
-
-  // Row 0 (bottom) is documented as unused during gameplay — left blank
-  // here to match, with a small disclaimer only shown outside play.
-  private drawFooter(game: Game): void {
-    if (game.state === 'ATTRACT' || game.state === 'GAME_OVER') {
-      this.centeredText('FAN-MADE - NOT AN ATARI PRODUCT', CANVAS_W / 2, CANVAS_H - 7, COLORS.disclaimer, 1, -1);
-    }
   }
 
   private drawGrid(): void {
@@ -380,16 +370,8 @@ export class Renderer {
   // Ports the always-on-screen attract text from ChkGameStart/
   // DrawBonusText/ShowScores: the high-score table, coin/credit line, and
   // bonus-life reminder are shown continuously, together, over the live
-  // demo rather than cycling through exclusive splash/table screens. A
-  // dimming backdrop sits behind the text (not a real-hardware trait, but
-  // without it the busy live demo -- a full centipede, spider, mushroom
-  // field -- reads as illegible visual noise directly behind the score
-  // digits; readability wins here over literal tile-layer fidelity).
+  // demo rather than cycling through exclusive splash/table screens.
   private drawAttractOverlay(game: Game): void {
-    const ctx = this.ctx;
-    ctx.fillStyle = 'rgba(0,0,0,0.58)';
-    ctx.fillRect(34, 4, 172, 198);
-
     this.centeredText('HIGH SCORES', CANVAS_W / 2, 10, COLORS.attractText);
     game.highScores.forEach((entry, i) => {
       const row = `${pad(entry.score, 6)}  ${entry.initials}`;
