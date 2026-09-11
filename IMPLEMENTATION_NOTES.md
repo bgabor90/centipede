@@ -614,6 +614,18 @@ frame counter happens to be set at spawn time -- which the existing
 column wobble.) Fixed to a constant `centerCol = 15`, matching this
 project's own established center-column convention (`SHOOTER.START_COL`).
 
+## Scorpion's spawn row range corrected to 15-29
+
+`MoveScorpion`'s `:CreateScorp` ($2e7c-$2e86 in the Rev4 disassembly)
+picks the scorpion's spawn row from a `POKEY_RANDOM` byte masked to a
+multiple of 8 and offset by `$70` -- and the disassembler's own comment
+states outright that this resolves to "row 15-29". `ZONES.
+SCORPION_MIN_ROW` was 13 with no citation, apparently borrowed from the
+unrelated general "outfield" zone boundary (`OUTFIELD_MIN_ROW`, also 13).
+Added a dedicated `SCORPION_MAX_ROW` (29) alongside the corrected
+`SCORPION_MIN_ROW` (15), rather than continuing to reuse `GRID.ROWS`
+(30) as the upper bound.
+
 ## Explicitly approximated (flagged, not verified anywhere)
 
 - Named RGB hex values for each DBGR color (the source names colors, e.g.

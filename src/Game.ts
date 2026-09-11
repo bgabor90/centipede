@@ -746,7 +746,7 @@ export class Game {
       this.score >= SCORPION.FAST_SPEED_UNLOCK_SCORE &&
       this.rng.chance(SCORPION.FAST_SPEED_CHANCE_AFTER_UNLOCK);
     const speed = fast ? SCORPION.SPEED_FAST : SCORPION.SPEED_SLOW;
-    const row = this.rng.int(ZONES.SCORPION_MIN_ROW, GRID.ROWS);
+    const row = this.rng.int(ZONES.SCORPION_MIN_ROW, ZONES.SCORPION_MAX_ROW);
     this.scorpion = new Scorpion(row, this.rng.chance(0.5), speed);
     this.emit('scorpionSpawn');
   }

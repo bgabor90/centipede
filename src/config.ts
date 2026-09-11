@@ -22,7 +22,14 @@ export const ZONES = {
   INFIELD_MAX_ROW: 12, // Infield: rows 1-12
   OUTFIELD_MIN_ROW: 13, // Outfield: rows 13-30
   SPIDER_MAX_ROW_DEFAULT: 12, // Spider zone ceiling before score narrows it
-  SCORPION_MIN_ROW: 13,
+  // VERIFIED (MoveScorpion's :CreateScorp, $2e7c-$2e86 in the Rev4
+  // disassembly): the scorpion's spawn row is a POKEY_RANDOM byte masked
+  // to a multiple of 8 then offset by $70, which the disassembler's own
+  // comment states outright resolves to "row 15-29" -- not the previous
+  // unsourced 13-30 (borrowed from the unrelated general "outfield" zone
+  // boundary).
+  SCORPION_MIN_ROW: 15,
+  SCORPION_MAX_ROW: 29,
   MUSHROOM_MIN_ROW: 2, // Mushrooms never occupy row 1
 } as const;
 
