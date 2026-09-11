@@ -103,6 +103,36 @@ src/
   systems (particle effects, a replay recorder, telemetry) without touching
   `Game`'s internals.
 
+## Using your own sprite sheet
+
+The renderer's built-in pixel art (`src/systems/Sprites.ts`, `Palette.ts`)
+is used by default. If you have your own sprite sheet you have the rights
+to use, you can swap it in without touching the renderer:
+
+1. Put the image somewhere `public/` can serve it, e.g.
+   `public/assets/sprites/my-sheet.png`.
+2. Write a small file of your own (this repo intentionally doesn't ship
+   one) that builds a `SpriteMapping` — see the field descriptions in
+   `src/systems/spriteMapping.ts` — with your sheet's actual cell
+   coordinates, and calls `setCustomSpriteSheet(sheet, mapping)` once at
+   startup, e.g. from `main.ts` before the game loop starts:
+
+   ```ts
+   import { SpriteSheet } from './systems/SpriteSheet';
+   import { setCustomSpriteSheet } from './systems/spriteMapping';
+
+   setCustomSpriteSheet(
+     new SpriteSheet('/assets/sprites/my-sheet.png', /* cellWidth */ 16, /* cellHeight */ 8),
+     {
+       mushroom: { stages: [{ col: 0, row: 0 }, { col: 1, row: 0 } /* ... */] },
+       // any field you omit keeps using the built-in art for that sprite
+     }
+   );
+   ```
+
+Every field in `SpriteMapping` is optional, so you can wire up one sprite
+at a time and leave the rest on the built-in art.
+
 ## Known simplifications
 
 This is a faithful recreation of the *rules*, not a disassembly-accurate
@@ -115,9 +145,9 @@ port of the original ROM:
   deflecting off the centipede) via a randomized state machine — it's a
   faithful approximation of the behavior, not a port of the original's exact
   pseudo-random sequence (which isn't published anywhere).
-- **Attack-wave slow/fast alternation** implements the manual's documented
-  rule (Table 4: each composition plays once slow, once fast, until 40,000
-  points, after which every wave is fast) as precisely as the source
-  describes it.
+- **Centipede speed** follows the disassembly notes: the main chain moves
+  at 1 px/frame until 40,000 points, then 2 px/frame; independent heads,
+  including split-off chains created by shooting a body segment, move at
+  2 px/frame.
 - Art and sound are original work matching the manual's descriptions of each
   character, not extracted ROM graphics/samples.
