@@ -158,15 +158,25 @@ export const SPIDER = {
   // The kill-cooldown above stays at the Video Master's Guide's clearer
   // "about 4 seconds".
   RESPAWN_AFTER_ESCAPE_MS: 800,
-  // Table 6: max row the spider may rise to, keyed by score threshold.
+  // VERIFIED (MoveSpider's :ScoreAdj, $22b0-$22ce in the Rev4
+  // disassembly): the max row is 12 minus an adjustment computed from the
+  // score's ten/hundred-thousands BCD digit pair -- `(digitPair - 6)`,
+  // right-shifted once, clamped to 0-5, each unit worth one row. Working
+  // through the actual byte arithmetic band-by-band reproduces exactly
+  // the 79,999/99,999/119,999/139,999/159,999 breakpoints already here,
+  // but the adjustment permanently clamps at 5 (row 7) once the digit
+  // pair reaches $16 (160,000+) -- there is no further change in this
+  // formula at any higher score. The previous 859,999/Infinity split that
+  // widened the zone back to row 12 at high score doesn't come from this
+  // routine (nothing here ever un-clamps the adjustment) and produced the
+  // opposite of the intended difficulty curve at very high scores.
   ZONE_BY_SCORE: [
     { upTo: 79_999, maxRow: 12 },
     { upTo: 99_999, maxRow: 11 },
     { upTo: 119_999, maxRow: 10 },
     { upTo: 139_999, maxRow: 9 },
     { upTo: 159_999, maxRow: 8 },
-    { upTo: 859_999, maxRow: 7 },
-    { upTo: Infinity, maxRow: 12 },
+    { upTo: Infinity, maxRow: 7 },
   ] as const,
   // VERIFIED (MoveSpider $2231-$2266, read in full this time -- an earlier
   // session saw only a fragment of this and correctly declined to trust

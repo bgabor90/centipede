@@ -214,10 +214,36 @@ rather than replace a complete, unambiguous source with an ambiguous
 fragment, these stayed as originally implemented from the 1982 strategy
 guide:
 
-- Spider kill-respawn timing (~4s) and zone narrowing by score.
-- Per-target point values (centipede head/body, spider, flea, scorpion)
-  and the attack-wave composition/speed-alternation table.
-- Side-feed timing decay curve.
+- Spider kill-respawn timing (~4s). `MoveSpider`'s own kill-scoring tail
+  sets two separate cooldown variables (`spider_cd_ctr` and
+  `spider_cooldown`) to the same 128-frame (~2.13s) value, but they're
+  read back by two different routines (`:DeadSpider`'s natural in-place
+  resurrect vs. `:ChkAllDead`'s independent full `InitSpider` reset) whose
+  interaction isn't fully traced -- genuinely ambiguous from a partial
+  reading, not just incomplete, so this stays on the guide's ~4s pending a
+  session that resolves how those two paths actually interact.
+- Side-feed's score-based "stage 2" deceleration past its first ~12 links
+  (`STAGE2_MIN_INTERVAL_MS`/`STAGE2_DECREASE_PER_10K_MS`/
+  `CYCLE_RESET_SCORE_SPAN`). `CreateHead`'s own cooldown value
+  (`plyr_head_ctr_init`) permanently floors at 96 frames after those 12
+  decrements with nothing in that routine tying it to score further --
+  but real high-score play empirically feeds much faster than a fixed
+  1.6s floor, so this is likely an emergent effect of some other system
+  (e.g. centipede speed itself scaling with score) rather than a further
+  reduction of this specific cooldown, which a full trace hasn't
+  confirmed either way. (Its *entry side*, unrelated to timing, was a
+  clean fix -- see below.)
+
+Independently re-derived and found to already match exactly (no change
+needed, but now confirmed rather than merely "kept"):
+- Per-target point values: centipede body 10 / head 100 (`:ChkSegment`,
+  $3018-$3020), flea 200 (`:ChkHorz`, $2fba), scorpion 1000 (`:ChkScorp`,
+  $2fca).
+- The attack-wave composition/speed-alternation table: `InitCentipede`'s
+  own decrement-and-wrap of `plyr_cent_len` (12 down to 1, repeating) and
+  its fill-remaining-slots-as-solo-heads loop reproduce the manual's
+  Table 4 chain-length/single-head counts exactly, without an explicit
+  lookup table on real hardware at all.
 
 ## Attract mode: continuous demo, not exclusive phases
 
@@ -625,6 +651,23 @@ unrelated general "outfield" zone boundary (`OUTFIELD_MIN_ROW`, also 13).
 Added a dedicated `SCORPION_MAX_ROW` (29) alongside the corrected
 `SCORPION_MIN_ROW` (15), rather than continuing to reuse `GRID.ROWS`
 (30) as the upper bound.
+
+## Spider's zone-narrowing-by-score has no high-score "reset"
+
+`MoveSpider`'s `:ScoreAdj` ($22b0-$22ce in the Rev4 disassembly) --
+previously listed as "kept from the Video Master's Guide, not
+overridden" pending a complete read -- computes the spider's max row as
+12 minus an adjustment derived from the score's ten/hundred-thousands
+BCD digit pair: `(digitPair - 6)`, right-shifted once, clamped to 0-5 (one
+row per unit). Working the actual byte arithmetic through band-by-band
+reproduces the existing 79,999/99,999/119,999/139,999/159,999
+breakpoints exactly, but the adjustment *permanently* clamps at 5 (row
+7) once the digit pair reaches $16 (160,000+) -- nothing in this routine
+ever un-clamps it at any higher score. `SPIDER.ZONE_BY_SCORE`'s trailing
+`859,999 -> 7` then `Infinity -> 12` split doesn't come from this
+formula and widened the zone back out at very high scores, the opposite
+of the intended curve. Replaced with a permanent `Infinity -> 7` past
+159,999.
 
 ## Explicitly approximated (flagged, not verified anywhere)
 
