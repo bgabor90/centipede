@@ -16,15 +16,23 @@
 
 export type Mask = string[];
 
-/** Centipede body/head segment — a rounded pill; legs and eyes are drawn separately so they can animate. */
+/**
+ * Centipede body/head segment — a rounded bead held to a consistent ~8px
+ * width (matching the mushroom tile's 8x8 scale) rather than flaring out
+ * to fill the full 16px motion-object slot. Segments step exactly one grid
+ * cell (8px) apart, so an 8px-wide body sits edge-to-edge with its
+ * neighbors — connected, but each link still individually visible —
+ * instead of overlapping into one undifferentiated tube. Legs and eyes
+ * are drawn separately so they can animate.
+ */
 export const CENTIPEDE_MASK: Mask = [
   '................',
+  '................',
+  '.....FFFFFF.....',
   '....FFFFFFFF....',
-  '..FFFFFFFFFFFF..',
-  '.FFFFFFFFFFFFFF.',
-  '.FFFFFFFFFFFFFF.',
-  '..FFFFFFFFFFFF..',
   '....FFFFFFFF....',
+  '....FFFFFFFF....',
+  '.....FFFFFF.....',
   '................',
 ];
 
@@ -40,15 +48,19 @@ export const SPIDER_MASK: Mask = [
   '................',
 ];
 
-/** Scorpion — elongated body with a curled tail (D) at the back and small tail-fin nubs. */
+/**
+ * Scorpion — elongated body with a curled tail (D) at the back and small
+ * tail-fin nubs. Body width trimmed to ~10px (was flaring to 14px) so it
+ * reads closer to the mushroom/grid scale instead of oversized.
+ */
 export const SCORPION_MASK: Mask = [
-  '....DD..........',
-  '...D..D.........',
+  '...DD...........',
+  '..D..D..........',
+  '...FFFFFFFFFF...',
   '..FFFFFFFFFFFF..',
-  '.FFFFFFFFFFFFFF.',
-  '.FFFFFFFFFFFFFF.',
   '..FFFFFFFFFFFF..',
-  '...FF....FF.....',
+  '...FFFFFFFFFF...',
+  '....FF....FF....',
   '................',
 ];
 

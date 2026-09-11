@@ -270,17 +270,18 @@ export class Renderer {
 
     renderMask(this.putPixel, CENTIPEDE_MASK, cx, cy, { F: bodyColor }, flip);
 
-    // Legs cycle their horizontal position (a "conveyor belt" effect along
-    // the body) rather than flapping up and down, stepping at a fast,
-    // slightly-jumpy cadence like the original's frame-by-frame animation.
+    // Legs poke out just past the body's edges (now ~8px wide, matching
+    // the mushroom/grid scale) and cycle their horizontal position (a
+    // "conveyor belt" effect along the body) at a fast, slightly-jumpy
+    // cadence like the original's frame-by-frame animation.
     const legShift = Math.floor(this.frame / 4) % 2;
-    this.rect(cx - 7 + legShift, cy - 4, 1, 1, palette.legs);
-    this.rect(cx + 1 + legShift, cy - 4, 1, 1, palette.legs);
-    this.rect(cx - 3 + legShift, cy + 3, 1, 1, palette.legs);
-    this.rect(cx + 5 + legShift, cy + 3, 1, 1, palette.legs);
+    this.rect(cx - 5 + legShift, cy - 4, 1, 1, palette.legs);
+    this.rect(cx + 4 + legShift, cy - 4, 1, 1, palette.legs);
+    this.rect(cx - 5 + legShift, cy + 3, 1, 1, palette.legs);
+    this.rect(cx + 4 + legShift, cy + 3, 1, 1, palette.legs);
 
     if (v.isHead) {
-      const eyeDx = flip ? -3 : 3;
+      const eyeDx = flip ? -2 : 2;
       this.rect(cx + eyeDx - 1, cy - 1, 1, 1, palette.eyes);
       this.rect(cx + eyeDx + 1, cy - 1, 1, 1, palette.eyes);
     }
@@ -331,7 +332,7 @@ export class Renderer {
     }
 
     renderMask(this.putPixel, SCORPION_MASK, cx, cy, { F: COLORS.scorpion, D: COLORS.scorpionTail }, scorpion.dir < 0);
-    const pincerDx = scorpion.dir >= 0 ? 7 : -7;
+    const pincerDx = scorpion.dir >= 0 ? 5 : -5;
     this.rect(cx + pincerDx, cy - 2, 2, 2, COLORS.scorpion);
   }
 
