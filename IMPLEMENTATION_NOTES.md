@@ -408,6 +408,20 @@ while leaving the centipede untouched. Verified directly: centipede head
 position stays frozen through the window while the spider continues
 moving normally.
 
+## Spider/flea/scorpion also keep running through the mushroom tally
+
+Following on from the player-death-pause fix above: `ChkDelay`/`CheckEnd`
+($2416-$2423) don't even start counting `delay_ctr` down while the
+tally is in progress (`mush_ptr` still set) -- it stays at its post-
+death value, nonzero, for however long the tally takes. Since only
+`MoveCentipede`/`CreateHead` check `delay_ctr` at all, that means only
+the centipede stays frozen through the *entire* tally; spider/flea/
+scorpion keep running exactly as in normal play. `updateTally()`
+previously called nothing but the tally logic itself, freezing
+everything for the whole sequence. Fixed by also calling `updateSpider`/
+`updateFlea`/`updateScorpion` each tally frame. Verified directly: the
+centipede stays frozen mid-tally while the spider keeps moving.
+
 ## Explicitly approximated (flagged, not verified anywhere)
 
 - Named RGB hex values for each DBGR color (the source names colors, e.g.

@@ -869,7 +869,18 @@ export class Game {
     });
   }
 
+  // VERIFIED (ChkDelay/CheckEnd, $2416-$2423): `delay_ctr` doesn't even
+  // start counting down while `mush_ptr` (the tally-in-progress flag) is
+  // still set -- it stays at its post-death value, nonzero, for the
+  // *entire* tally, however long that takes. Since only MoveCentipede and
+  // CreateHead check `delay_ctr` at all, that means only the centipede
+  // stays frozen through the whole tally; spider/flea/scorpion keep
+  // running exactly as they do during normal play.
   private updateTally(dt: number): void {
+    this.updateSpider(dt);
+    this.updateFlea(dt);
+    this.updateScorpion(dt);
+
     this.tallyTimer -= dt;
     if (this.tallyTimer > 0) return;
     this.tallyTimer = TALLY_TICK_SECONDS;
