@@ -4,6 +4,7 @@ import type { SegmentView } from '../entities/Centipede';
 import type { FeatureFlags } from '../config';
 import { drawBitmapText, measureText } from './BitmapFont';
 import { getWavePalette } from './Palette';
+import { CENTIPEDE_MASK, FLEA_MASK, SCORPION_MASK, SPIDER_MASK, renderMask } from './Sprites';
 
 // Verified screen/tile geometry (6502disassembly.com/va-centipede/graphics.html):
 // "Resolution: 240x256 pixels", "30x32 grid of 8x8 pixel tiles", gameplay
@@ -30,31 +31,40 @@ const COLORS = {
   spiderLeg: '#ff6ec8',
   flea: '#ff3c6e',
   scorpion: '#ffb02e',
+  scorpionTail: '#cc6a12',
   shot: '#ffffff',
   gridLine: 'rgba(255,255,255,0.08)',
   disclaimer: '#3a3a3a',
 } as const;
 
-// 8x8 pristine mushroom mask; damage removes cells in `biteOrder`.
+// 8x8 mushroom mask: a two-tone cap (fill 'F' + a darker rim 'R' outline)
+// over a stem — a rounder, less flat-looking mushroom than a single-color
+// cap. Damage removes cells in `CAP_BITE_ORDER`.
 const MUSHROOM_MASK = [
-  '..CCCC..',
-  '.CCCCCC.',
-  'CCCCCCCC',
-  'CCCCCCCC',
-  '..SSSS..',
+  '..RRRR..',
+  '.RFFFFR.',
+  'RFFFFFFR',
+  'RFFFFFFR',
+  '.RFFFFR.',
   '..SSSS..',
   '..SSSS..',
   '........',
 ].map((row) => row.split(''));
 
-// Order in which cap cells are chipped away as the mushroom takes hits,
-// biased to eat one corner first so damage reads as a "bite."
-const BITE_ORDER: Array<[number, number]> = [
-  [0, 2], [0, 3], [0, 4], [0, 5],
-  [1, 6], [1, 7], [2, 7], [3, 7],
-  [1, 0], [1, 1], [2, 0], [3, 0],
-  [2, 1], [2, 6], [3, 6], [3, 1],
-];
+// Every cap cell (fill or rim), ordered by distance from the top-right
+// corner so damage reads as a bite eating inward from one side, generated
+// from the mask rather than hand-listed.
+const CAP_BITE_ORDER: Array<[number, number]> = (() => {
+  const cells: Array<[number, number]> = [];
+  for (let r = 0; r < MUSHROOM_MASK.length; r++) {
+    for (let c = 0; c < MUSHROOM_MASK[r].length; c++) {
+      if (MUSHROOM_MASK[r][c] !== '.' && MUSHROOM_MASK[r][c] !== 'S') cells.push([r, c]);
+    }
+  }
+  cells.sort((a, b) => a[0] + (7 - a[1]) - (b[0] + (7 - b[1])));
+  return cells;
+})();
+const BITE_CHUNK = Math.ceil(CAP_BITE_ORDER.length / 3);
 
 /**
  * Everything in this renderer is drawn on a hard pixel grid — every fill
@@ -100,7 +110,7 @@ export class Renderer {
     this.drawPlayfieldBorder();
     if (features.showGrid) this.drawGrid();
 
-    this.drawMushrooms(game, palette.body);
+    this.drawMushrooms(game, palette.body, palette.eyes);
     this.drawCentipede(game, palette);
     if (game.spider) this.drawSpider(game.spider);
     if (game.flea) this.drawFlea(game.flea);
@@ -200,18 +210,22 @@ export class Renderer {
   }
 
   // -- entities -------------------------------------------------------------
-  private drawMushrooms(game: Game, bodyColor: string): void {
+  private drawMushrooms(game: Game, fillColor: string, rimColor: string): void {
     game.mushrooms.forEach((row, col, cell) => {
       const x = this.px(col);
       const y = this.py(row);
-      const capColor = cell.poisoned ? COLORS.capPoison : bodyColor;
-      const removed = new Set(BITE_ORDER.slice(0, cell.hits * 4).map(([r, c]) => `${r},${c}`));
+      const fill = cell.poisoned ? COLORS.capPoison : fillColor;
+      const rim = cell.poisoned ? COLORS.capPoison : rimColor;
+      const removed = new Set(
+        CAP_BITE_ORDER.slice(0, cell.hits * BITE_CHUNK).map(([r, c]) => `${r},${c}`)
+      );
       for (let r = 0; r < 8; r++) {
         for (let c = 0; c < 8; c++) {
           const ch = MUSHROOM_MASK[r][c];
           if (ch === '.') continue;
-          if (ch === 'C' && removed.has(`${r},${c}`)) continue;
-          this.rect(x + c, y + r, 1, 1, ch === 'C' ? capColor : COLORS.stem);
+          if ((ch === 'F' || ch === 'R') && removed.has(`${r},${c}`)) continue;
+          const color = ch === 'F' ? fill : ch === 'R' ? rim : COLORS.stem;
+          this.rect(x + c, y + r, 1, 1, color);
         }
       }
     });
@@ -222,48 +236,54 @@ export class Renderer {
     for (const v of views) this.drawSegment(v, palette);
   }
 
+  private putPixel = (x: number, y: number, color: string): void => this.rect(x, y, 1, 1, color);
+
   // The original reuses one sprite per row via a horizontal-flip flag
-  // rather than drawing separate left/right art; `dir` mirrors the
-  // leg/eye offsets the same way here.
+  // rather than drawing separate left/right art; `dir` mirrors the mask
+  // and the leg/eye offsets the same way here.
   private drawSegment(v: SegmentView, palette: { body: string; legs: string; eyes: string }): void {
     const { cx, cy } = this.center(v.col, v.row);
     const bodyColor = v.poisoned ? COLORS.poisonedSeg : palette.body;
-    const flip = v.dir >= 0 ? 1 : -1;
+    const flip = v.dir < 0;
 
-    this.roundedBlock(cx - 3, cy - 3, 7, 7, bodyColor);
+    renderMask(this.putPixel, CENTIPEDE_MASK, cx, cy, { F: bodyColor }, flip);
 
     const legPhase = (this.frame >> 3) % 2 === 0;
-    this.rect(cx - 4 * flip, cy + (legPhase ? -2 : 1), 1, 2, palette.legs);
-    this.rect(cx + 3 * flip, cy + (legPhase ? 1 : -2), 1, 2, palette.legs);
+    this.rect(cx - 7, cy + (legPhase ? -4 : 3), 1, 1, palette.legs);
+    this.rect(cx - 2, cy + (legPhase ? 3 : -4), 1, 1, palette.legs);
+    this.rect(cx + 1, cy + (legPhase ? -4 : 3), 1, 1, palette.legs);
+    this.rect(cx + 6, cy + (legPhase ? 3 : -4), 1, 1, palette.legs);
 
     if (v.isHead) {
-      this.rect(cx - 2 * flip, cy - 1, 1, 1, palette.eyes);
-      this.rect(cx + 1 * flip, cy - 1, 1, 1, palette.eyes);
+      const eyeDx = flip ? -3 : 3;
+      this.rect(cx + eyeDx - 1, cy - 1, 1, 1, palette.eyes);
+      this.rect(cx + eyeDx + 1, cy - 1, 1, 1, palette.eyes);
     }
   }
 
   private drawSpider(spider: NonNullable<Game['spider']>): void {
     const { cx, cy } = this.center(spider.x, spider.y);
     for (const [dx, dy] of [
-      [-5, -2], [5, -2], [-6, 1], [6, 1], [-4, 3], [4, 3],
+      [-7, -2], [7, -2], [-8, 1], [8, 1], [-6, 3], [6, 3], [-5, -3], [5, -3],
     ] as const) {
       this.rect(cx + dx, cy + dy, 2, 1, COLORS.spiderLeg);
     }
-    this.roundedBlock(cx - 3, cy - 3, 6, 6, COLORS.spiderBody);
+    renderMask(this.putPixel, SPIDER_MASK, cx, cy, { F: COLORS.spiderBody });
   }
 
   private drawFlea(flea: NonNullable<Game['flea']>): void {
     const { cx, cy } = this.center(flea.col, flea.y);
-    this.rect(cx - 2, cy - 4, 4, 8, COLORS.flea);
-    this.rect(cx - 3, cy - 1, 1, 2, COLORS.flea);
-    this.rect(cx + 2, cy - 1, 1, 2, COLORS.flea);
+    renderMask(this.putPixel, FLEA_MASK, cx, cy, { F: COLORS.flea });
+    const wingPhase = (this.frame >> 2) % 2 === 0;
+    this.rect(cx - 4, cy + (wingPhase ? -1 : 1), 1, 2, COLORS.flea);
+    this.rect(cx + 3, cy + (wingPhase ? 1 : -1), 1, 2, COLORS.flea);
   }
 
   private drawScorpion(scorpion: NonNullable<Game['scorpion']>): void {
     const { cx, cy } = this.center(scorpion.x, scorpion.row);
-    this.rect(cx - 4, cy - 2, 8, 4, COLORS.scorpion);
-    this.rect(cx + 3 * scorpion.dir, cy - 4, 2, 2, COLORS.scorpion);
-    this.rect(cx - 5 * scorpion.dir, cy - 3, 2, 3, COLORS.scorpion);
+    renderMask(this.putPixel, SCORPION_MASK, cx, cy, { F: COLORS.scorpion, D: COLORS.scorpionTail }, scorpion.dir < 0);
+    const pincerDx = scorpion.dir >= 0 ? 7 : -7;
+    this.rect(cx + pincerDx, cy - 2, 2, 2, COLORS.scorpion);
   }
 
   private drawShot(shot: NonNullable<Game['shot']>): void {
@@ -313,11 +333,6 @@ export class Renderer {
       `SHOOTER ${game.shooter.x.toFixed(1)} ${game.shooter.y.toFixed(1)}`,
     ];
     lines.forEach((l, i) => this.text(l, 2, HEADER_H + 2 + i * 8, '#33ff66'));
-  }
-
-  private roundedBlock(x: number, y: number, w: number, h: number, color: string): void {
-    this.rect(x + 1, y, w - 2, h, color);
-    this.rect(x, y + 1, w, h - 2, color);
   }
 }
 
