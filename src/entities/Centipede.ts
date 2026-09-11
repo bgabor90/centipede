@@ -259,6 +259,12 @@ export class CentipedeManager {
   update(dt: number, world: CentipedeWorld): void {
     for (const chain of this.chains) chain.update(dt, world);
     this.chains = this.chains.filter((c) => !c.isEmpty);
+    // VERIFIED ($2994-$29ae in the Rev4 disassembly): once exactly one
+    // centipede segment remains alive for the wave, its speed is forced to
+    // fast from then on, regardless of the wave's slow/fast designation.
+    if (this.totalSegments === 1) {
+      this.chains[0].speed = CENTIPEDE_SPEED.FAST;
+    }
   }
 
   getAllSegmentViews(): SegmentView[] {

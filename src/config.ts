@@ -37,11 +37,17 @@ export const LIVES = {
 };
 
 export const SCORING = {
-  SPIDER_CLOSE: 900, // within ~1 row of shooter
-  SPIDER_MEDIUM: 600, // within ~4 rows
-  SPIDER_FAR: 300, // farther than 4 rows
-  SPIDER_CLOSE_ROWS: 1,
-  SPIDER_MEDIUM_ROWS: 4,
+  // VERIFIED (":CalcSpdrPts", $2fd6 in the Rev4 disassembly, read from the
+  // raw listing): compares only the *vertical* distance between spider and
+  // shooter (mobj_vert_spdr - mobj_vert_plyr) -- horizontal offset plays no
+  // part, unlike the previous 2D Euclidean-distance approximation. Raw
+  // thresholds are <22 units -> 900, <64 -> 600, else 300 (8px/row -> <2.75
+  // and <8 rows), replacing the previous 1/4-row guesses.
+  SPIDER_CLOSE: 900, // within ~2 rows of shooter (vertically)
+  SPIDER_MEDIUM: 600, // within ~7 rows (vertically)
+  SPIDER_FAR: 300, // farther than 7 rows (vertically)
+  SPIDER_CLOSE_ROWS: 2,
+  SPIDER_MEDIUM_ROWS: 7,
   FLEA: 200,
   SCORPION: 1000,
   CENTIPEDE_HEAD: 100,
@@ -67,7 +73,6 @@ export const WAVE_CYCLE = {
     return (index0 % WAVE_CYCLE.LENGTH);
   },
   SLOW_FAST_STOPS_AT_SCORE: 40_000,
-  SCORPION_UNLOCKS_AFTER_WAVE_INDEX0: 2, // "cannot appear until after 3rd wave of a cycle" (index0 2 == wave 3)
 } as const;
 
 export const CENTIPEDE_SPEED = {
@@ -80,16 +85,22 @@ export const CENTIPEDE_SPEED = {
 } as const;
 
 export const FLEA = {
-  // VERIFIED (6502disassembly.com Centipede_rev4.html): base fall speed is
-  // 2 px/frame below 60,000 points, 3 px/frame at/above it (60fps, 8px/cell
-  // -> 15 and 22.5 cells/sec). The Video Master's Guide separately documents
-  // a same-flight "fast -> very fast, never back" escalation once a flea is
-  // hit once; HIT_SPEED_MULTIPLIER (not from either source verbatim) applies
-  // that escalation on top of whichever base tier is active.
+  // VERIFIED (InitFlea, $2104-$2110 in the Rev4 disassembly): base fall
+  // speed is 2 px/frame below 60,000 points, 3 px/frame at/above it (60fps,
+  // 8px/cell -> 15 and 22.5 cells/sec).
   FALL_SPEED_SCORE_THRESHOLD: 60_000,
   FALL_SPEED_BASE_LOW: 15,
   FALL_SPEED_BASE_HIGH: 22.5,
-  HIT_SPEED_MULTIPLIER: 1.4,
+  // VERIFIED (ChkMobjColl, $2fba-$2fc2, read from the raw listing): a
+  // corrected reading of this mechanic. The Video Master's Guide's "fast ->
+  // very fast" phrasing previously led this project to snap a hit flea's
+  // speed to FALL_SPEED_BASE_HIGH (the same tier already used for scores
+  // >= 60,000), but the actual ROM sets a hit flea's speed to a fixed 4
+  // px/frame (30 cells/sec) -- a third tier, faster than either base
+  // speed, and distinct regardless of which base tier it started at. A
+  // flea already at that speed (i.e. hit once already) dies on the next
+  // hit instead of re-escalating.
+  HIT_ESCALATED_SPEED: 30,
   SHOTS_TO_KILL: 2,
   MIN_INFIELD_MUSHROOMS_BY_SCORE: [
     { upTo: 20_000, count: 5 },
@@ -113,24 +124,23 @@ export const FLEA = {
 } as const;
 
 export const SPIDER = {
-  // VERIFIED-BY-ANALOGY (6502disassembly.com Centipede_rev4.html): the
-  // source labels these "speed 1 (slow)" / "speed 2 (fast)" — the exact
-  // same convention confirmed for the centipede, which resolves to a
-  // literal 1px/2px per frame. Inferring the same absolute values here by
-  // analogy (60fps, 8px/cell -> 7.5 / 15 cells/sec); not independently
-  // confirmed that "speed 1/2" means pixels/frame for the spider specifically.
+  // VERIFIED (MoveSpider/InitSpider, $2202/$21c7 in the Rev4 disassembly,
+  // read directly from the raw listing): speed is literally 1 (slow) or 2
+  // (fast) in mobj_vvel_spdr/mobj_hvel_spdr, the same 1px/2px-per-frame
+  // convention already confirmed for the centipede and scorpion (60fps,
+  // 8px/cell -> 7.5 / 15 cells/sec) -- no longer just an analogy.
   SPEED_SLOW: 7.5,
   SPEED_FAST: 15,
+  // VERIFIED (InitSpider, $21cf-$21d9): the DIP-switch difficulty flag
+  // selects which score threshold ($10=1,000 hard / $50=5,000 easy) makes
+  // the spider start fast rather than slow -- matches these values exactly.
   SPEEDUP_SCORE_EASY: 5_000,
   SPEEDUP_SCORE_HARD: 1_000,
   RESPAWN_AFTER_KILL_MS: 4_000,
   // VERIFIED (6502disassembly.com): source comment reads "check again in
   // 48 frames (~3/4 sec)" for the post-escape recheck (60fps -> 800ms).
   // The kill-cooldown above stays at the Video Master's Guide's clearer
-  // "about 4 seconds" — a separate disassembly fragment suggested a much
-  // shorter (15-47 frame) value there, but it read as an ambiguous
-  // sub-timer rather than a confirmed player-facing respawn delay, so a
-  // complete, unambiguous source was preferred over a fragmentary one.
+  // "about 4 seconds".
   RESPAWN_AFTER_ESCAPE_MS: 800,
   // Table 6: max row the spider may rise to, keyed by score threshold.
   ZONE_BY_SCORE: [
@@ -142,25 +152,54 @@ export const SPIDER = {
     { upTo: 859_999, maxRow: 7 },
     { upTo: Infinity, maxRow: 12 },
   ] as const,
-  BOUNCE_MIN_HOLD_MS: 150,
-  BOUNCE_MAX_HOLD_MS: 500,
+  // VERIFIED (MoveSpider $2231-$2266, read in full this time -- an earlier
+  // session saw only a fragment of this and correctly declined to trust
+  // it): direction is reconsidered on a fixed 48-frame (~0.8s) cadence,
+  // not the previous hand-tuned continuous-probability wander. Each tick
+  // is two independent coin-flips: one toggles between a diagonal "slash"
+  // and a vertical-only hold (resuming diagonal if already holding), the
+  // other may reverse vertical direction outright -- at 75% under the
+  // "hard" difficulty DIP setting vs. 50% on easy, previously not modeled
+  // at all. Right after spawning, the first check comes sooner -- a 50/50
+  // pick between 15 and 47 frames (~0.25s / ~0.78s) -- before settling
+  // into the steady 48-frame cadence.
+  DIRECTION_CHECK_FRAMES: 48,
+  RESPAWN_FIRST_CHECK_FRAMES: [15, 47] as [number, number],
+  VERTICAL_REVERSAL_CHANCE_EASY: 0.5,
+  VERTICAL_REVERSAL_CHANCE_HARD: 0.75,
 } as const;
 
 export const SCORPION = {
-  // Still approximated (Video Master's Guide gives eligibility/behavior
-  // but no exact speed). A disassembly query for scorpion speed returned
-  // "2px/3px per frame at 60,000 points" — identical to the already-
-  // verified FLEA values — which is almost certainly the summarizer
-  // re-surfacing flea data under a scorpion prompt rather than genuine
-  // scorpion data, so it was discarded rather than trusted.
-  SPEED_SLOW: 4.5,
-  SPEED_FAST: 9.5,
+  // VERIFIED (6502disassembly.com/va-centipede/Centipede_rev4.html,
+  // MoveScorpion's :CreateScorp at $2e3a, read directly from the raw
+  // listing rather than a summarized fetch -- an earlier session flagged
+  // a "2px/3px at 60,000" answer as an untrustworthy summarizer echo of
+  // the flea's own values, and rightly discarded it, but this is the
+  // actual scorpion-speed code: below 20,000 points speed is always $01;
+  // at/above it, a 1-in-4 roll keeps $01 and 3-in-4 sets $02. Same 1px/2px-
+  // per-frame convention already confirmed for the centipede and spider
+  // (60fps, 8px/cell -> 7.5 / 15 cells/sec) -- not a coincidental match
+  // with flea's numbers, an independently-confirmed instance of the same
+  // hardware convention.
+  SPEED_SLOW: 7.5,
+  SPEED_FAST: 15,
   FAST_SPEED_UNLOCK_SCORE: 20_000,
   FAST_SPEED_CHANCE_AFTER_UNLOCK: 0.75,
-  // The manual gives eligibility rules but not an exact crossing frequency;
-  // this range is a tunable approximation of a "lurking" cadence.
-  SPAWN_INTERVAL_MIN_MS: 4000,
-  SPAWN_INTERVAL_MAX_MS: 9000,
+  // VERIFIED: :CreateScorp only runs when frame_ctr==0 (once every 256
+  // frames, ~4.27s at 60fps) and even then bails 75% of the time (`and
+  // #$03; bne :Jmp_Return`), so a spawn is checked roughly every 4.27s but
+  // only succeeds on average every ~17s (geometric, so still highly
+  // variable run to run) -- much rarer than the previous 4-9s tunable
+  // guess.
+  SPAWN_CHECK_INTERVAL_SECONDS: 256 / 60,
+  SPAWN_CHANCE_PER_CHECK: 0.25,
+  // VERIFIED: gated behind `cmp #NCENT-1; bcs :Jmp_Return` (NCENT=12) --
+  // a scorpion can only be created while the *current* centipede's live
+  // segment count is below 11, i.e. only once the wave's chain has already
+  // taken at least one hit (or started partially split). This replaces a
+  // previous "unlocks after wave 3 of the cycle" approximation, which was
+  // a reasonable guess but not what the ROM actually checks.
+  MAX_ELIGIBLE_CENTIPEDE_LENGTH: 11,
 } as const;
 
 export const SIDE_FEED = {
@@ -180,6 +219,15 @@ export const SHOOTER = {
   START_COL: 15, // center-ish of 30 columns (1-indexed)
   MOVE_SPEED: 40, // cells/second under keyboard control
   SHOT_SPEED: 46, // cells/second, straight up
+  // The disassembly's AttractMove ($2119) calls the same MovePlyrHorz/
+  // MovePlayerVert routines used by real play, but the fetched excerpt
+  // doesn't show their per-frame pixel step, so the original cadence can't
+  // be reproduced exactly. MOVE_SPEED (tuned for responsive keyboard input)
+  // is far too fast for the vertical shooter zone's 5-row span -- it
+  // bounced top-to-bottom several times a second, reading as frantic
+  // vibration rather than the leisurely bob/drift seen in real attract
+  // footage. This is a tuned approximation of that calmer pace.
+  ATTRACT_MOVE_SPEED: 8, // cells/second, demo-mode bounce movement only
 } as const;
 
 export const AUDIO = {

@@ -18,7 +18,7 @@ export class Shooter {
   }
 
   /** Moves toward (targetX, targetY), clamped to the shooter zone and mushrooms. */
-  moveToward(targetX: number, targetY: number, dt: number, mushrooms: MushroomField, instant = false): void {
+  moveToward(targetX: number, targetY: number, dt: number, mushrooms: MushroomField, instant = false, speed: number = SHOOTER.MOVE_SPEED): void {
     const clampedX = clamp(targetX, 1, GRID.COLS);
     const clampedY = clamp(targetY, 1, ZONES.SHOOTER_MAX_ROW);
 
@@ -27,7 +27,7 @@ export class Shooter {
       nx = clampedX;
       ny = clampedY;
     } else {
-      const maxStep = SHOOTER.MOVE_SPEED * dt;
+      const maxStep = speed * dt;
       nx = stepToward(this.x, clampedX, maxStep);
       ny = stepToward(this.y, clampedY, maxStep);
     }

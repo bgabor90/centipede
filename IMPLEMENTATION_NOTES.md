@@ -57,6 +57,49 @@ Fetched and cross-checked this session (see citations in `config.ts` /
   (previously a pre-planned random count per descent).
 - **Bonus-life score thresholds** (10k/12k/15k/20k operator options):
   corroborated the Video Master's Guide's Table 3 already in use.
+- **Flea's within-flight hit-once speed escalation**: corrected twice this
+  session. First pass replaced an approximated 1.4x multiplier with a
+  snap to FALL_SPEED_BASE_HIGH, reasoning from the Video Master's Guide's
+  "fast -> very fast" phrasing. Reading `ChkMobjColl` ($2fba-$2fc2)
+  directly afterward showed that's still wrong: the ROM sets a hit flea
+  to a fixed 4 px/frame (30 cells/sec) — a third tier, not either base
+  speed — and only kills it on a second hit if it's already at that
+  speed. Now uses the dedicated HIT_ESCALATED_SPEED constant.
+- **Scorpion speed, spawn gating, and mushroom-poisoning rules**: read
+  `MoveScorpion` directly from the raw disassembly listing (not a
+  summarized fetch, after an earlier session correctly distrusted one).
+  Speed is the same confirmed 1px/2px-per-frame convention as the
+  centipede and spider (7.5 / 15 cells/sec, not the previous 4.5 / 9.5
+  guess). A spawn is only even considered once every ~256 frames (~4.27s)
+  and succeeds just 25% of the time, and only while the current
+  centipede's live segment count is below 11 (NCENT-1) — replacing a
+  previous "unlocks after wave 3 of the cycle" approximation. It also only
+  poisons a fully-intact mushroom, leaving already-damaged or
+  already-poisoned ones alone.
+- **Spider movement and speed**: read `MoveSpider`/`InitSpider` directly
+  from the raw disassembly listing. Speed is confirmed as the same
+  1px/2px-per-frame convention as the centipede and scorpion (7.5 / 15,
+  upgraded from "verified by analogy" to verified outright), and the
+  1,000/5,000-point difficulty thresholds for going fast early matched
+  exactly. Replaced the previous hand-tuned continuous-probability
+  diagonal/vertical wander with the ROM's actual mechanism: a fixed
+  48-frame (~0.8s) redecision cadence (15-or-47 frames for the first
+  check after spawning) driving two independent coin-flips -- one toggles
+  between a diagonal slash and a vertical-only hold, the other may
+  reverse vertical direction outright, at 75% under the "hard" difficulty
+  DIP setting vs. 50% on easy (previously not modeled at all).
+- **Spider kill scoring's distance calculation**: `CalcSpdrPts`
+  ($2fd6-$2ff2) compares only the *vertical* distance between spider and
+  shooter -- horizontal offset plays no part -- with raw thresholds of
+  <22 units -> 900, <64 -> 600, else 300 (8px/row -> <2.75 and <8 rows).
+  Replaced a 2D Euclidean-distance approximation and 1-row/4-row
+  thresholds with a vertical-only distance and 2-row/7-row thresholds.
+- **Lone-segment speed rule**: found while reading the segment-advance
+  routine ($2994-$29ae) -- once exactly one centipede segment remains
+  alive for the wave, its speed is forced to fast from then on,
+  regardless of the wave's slow/fast designation. `CentipedeManager`
+  previously left a surviving lone segment at whatever speed it already
+  had.
 
 ## Behaviors kept from the Video Master's Guide (not overridden)
 
@@ -65,10 +108,7 @@ rather than replace a complete, unambiguous source with an ambiguous
 fragment, these stayed as originally implemented from the 1982 strategy
 guide:
 
-- Spider respawn timing (~4s after a kill, ~2s after an escape), zone
-  narrowing by score, and point-by-distance (300/600/900).
-- Scorpion behavior and poisoning rules (the disassembly excerpt available
-  this session didn't surface scorpion-specific routines).
+- Spider kill-respawn timing (~4s) and zone narrowing by score.
 - Per-target point values (centipede head/body, spider, flea, scorpion)
   and the attack-wave composition/speed-alternation table.
 - Side-feed timing decay curve.
@@ -78,9 +118,6 @@ guide:
 - Centipede horizontal movement speed in absolute px/frame (two discrete
   tiers are confirmed to exist; the numeric value wasn't in the fetched
   excerpt — tuned by feel instead).
-- The flea's within-flight "hit once -> faster" speed multiplier (the
-  escalation itself is documented in the strategy guide; the exact factor
-  is this project's own choice).
 - POKEY channel-to-sound-effect mapping is transcribed from the reference
   pack, not independently re-confirmed against the disassembly text by
   this session; flea's channel isn't documented anywhere found, so it's

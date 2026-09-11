@@ -116,7 +116,7 @@ export class Game {
 
   private spiderTimer = 2.5;
   private fleaAllowedTimer = 1.5;
-  private scorpionTimer = 5;
+  private scorpionTimer = SCORPION.SPAWN_CHECK_INTERVAL_SECONDS;
 
   private sideFeedActive = false;
   private sideFeedTimer = 0;
@@ -130,8 +130,14 @@ export class Game {
   private deathTimer = 0;
   private justClearedWave = false;
   private attractTimer = 0;
-  private attractDemoTimer = 0;
-  private attractFireTimer = 0.2;
+  // Ports AttractMove ($2119 in the Rev4 disassembly): the demo-mode player
+  // moves in a straight line and only reverses when it nears a playfield
+  // edge (a deterministic bounce, not a sine wander), and that movement
+  // freezes for the top half of every 256-frame cycle (`frame_ctr & $80`
+  // in the original) while the rest of the simulation keeps running.
+  private attractHVel: 1 | -1 = 1;
+  private attractVVel: 1 | -1 = 1;
+  private attractFrame = 0;
   private gameOverTimer = 0;
   private pendingInitialScore = 0;
 
@@ -176,7 +182,7 @@ export class Game {
     this.spawnWave(this.currentWave);
     this.spiderTimer = 2.5;
     this.fleaAllowedTimer = 3;
-    this.scorpionTimer = this.rng.int(SCORPION.SPAWN_INTERVAL_MIN_MS, SCORPION.SPAWN_INTERVAL_MAX_MS) / 1000;
+    this.scorpionTimer = SCORPION.SPAWN_CHECK_INTERVAL_SECONDS;
     this.state = 'PLAYING';
     this.emit('gameStart');
   }
@@ -185,8 +191,9 @@ export class Game {
     this.state = 'ATTRACT';
     this.attractPhase = 'TITLE';
     this.attractTimer = 0;
-    this.attractDemoTimer = 0;
-    this.attractFireTimer = 0.25;
+    this.attractHVel = 1;
+    this.attractVVel = 1;
+    this.attractFrame = 0;
     this.score = 0;
     this.lives = this.options.startingLives;
     this.bonusLivesAwarded = 0;
@@ -209,7 +216,7 @@ export class Game {
     this.spawnWave(this.currentWave);
     this.spiderTimer = 2.4;
     this.fleaAllowedTimer = 4;
-    this.scorpionTimer = 6;
+    this.scorpionTimer = SCORPION.SPAWN_CHECK_INTERVAL_SECONDS;
   }
 
   private scatterAttractMushrooms(): void {
@@ -293,7 +300,6 @@ export class Game {
 
   private updateAttract(dt: number): void {
     this.attractTimer += dt;
-    this.attractDemoTimer += dt;
     this.updateAttractDemo(dt);
 
     if (this.attractTimer < ATTRACT_PHASE_SECONDS[this.attractPhase]) return;
@@ -307,22 +313,35 @@ export class Game {
     }
   }
 
+  // VERIFIED (6502disassembly.com/va-centipede/Centipede_rev4.html,
+  // AttractMove at $2119 and UpdateShot's attract branch at $2efa): the
+  // real demo player doesn't wander -- it walks in a straight line and
+  // only reverses when it nears an edge, and it stops updating entirely
+  // for the top half of every 256-frame cycle (ported below as
+  // attractFrame's bit-7 check) while the centipede/spider/flea/shot
+  // keep running regardless, exactly as they do in the original MainLoop.
   private updateAttractDemo(dt: number): void {
-    const t = this.attractDemoTimer;
-    const targetX = 15 + Math.sin(t * 1.05) * 11 + Math.sin(t * 2.2) * 2.5;
-    const targetY = 2.7 + Math.sin(t * 1.6) * 2.3;
-    this.shooter.moveToward(
-      Math.min(GRID.COLS, Math.max(1, targetX)),
-      Math.min(ZONES.SHOOTER_MAX_ROW, Math.max(1, targetY)),
-      dt,
-      this.mushrooms,
-      false
-    );
+    this.attractFrame = (this.attractFrame + 1) & 0xff;
+    if ((this.attractFrame & 0x80) === 0) {
+      const ATTRACT_HORIZ_MARGIN = 3; // ~ the ROM's $1c/$e4 edge thresholds, scaled to our 30-col width
 
-    this.attractFireTimer -= dt;
-    if (this.attractFireTimer <= 0 && !this.shot) {
+      if (this.shooter.x <= ATTRACT_HORIZ_MARGIN) this.attractHVel = 1;
+      else if (this.shooter.x >= GRID.COLS - ATTRACT_HORIZ_MARGIN) this.attractHVel = -1;
+
+      if (this.shooter.y <= 1) this.attractVVel = 1;
+      else if (this.shooter.y >= ZONES.SHOOTER_MAX_ROW) this.attractVVel = -1;
+
+      const targetX = this.attractHVel > 0 ? GRID.COLS : 1;
+      const targetY = this.attractVVel > 0 ? ZONES.SHOOTER_MAX_ROW : 1;
+      this.shooter.moveToward(targetX, targetY, dt, this.mushrooms, false, SHOOTER.ATTRACT_MOVE_SPEED);
+    }
+
+    // UpdateShot substitutes a random byte for the real fire-switch read
+    // while in attract mode, so a new shot is (re-)armed roughly 50% of
+    // the frames it's unarmed -- effectively firing again almost the
+    // instant the previous shot resolves, rather than on a fixed cadence.
+    if (!this.shot && this.rng.chance(0.5)) {
       this.shot = new Shot(this.shooter.col, this.shooter.y + 0.4, this.shooter.x);
-      this.attractFireTimer = 0.24 + (Math.sin(t * 2.7) + 1) * 0.16;
     }
 
     this.updateShot(dt);
@@ -399,7 +418,10 @@ export class Game {
       }
 
       if (this.spider && Math.round(this.spider.row) === r && this.spider.col === col) {
-        const dist = Math.hypot(this.spider.row - this.shooter.y, this.spider.col - this.shooter.x);
+        // VERIFIED: the ROM's spider-kill scoring compares vertical
+        // distance only (mobj_vert_spdr - mobj_vert_plyr) -- horizontal
+        // offset isn't part of the calculation.
+        const dist = Math.abs(this.spider.y - this.shooter.y);
         const points =
           dist <= SCORING.SPIDER_CLOSE_ROWS
             ? SCORING.SPIDER_CLOSE
@@ -465,7 +487,8 @@ export class Game {
     if (this.spiderTimer <= 0) {
       const speedupScore = this.options.spiderSpeedupScore;
       const speed = this.score >= speedupScore ? SPIDER.SPEED_FAST : SPIDER.SPEED_SLOW;
-      this.spider = new Spider(this.rng.chance(0.5), speed, this.rng);
+      const hardDifficulty = this.options.spiderSpeedupScore === SPIDER.SPEEDUP_SCORE_HARD;
+      this.spider = new Spider(this.rng.chance(0.5), speed, this.rng, hardDifficulty);
       this.emit('spiderSpawn');
     }
   }
@@ -508,6 +531,11 @@ export class Game {
   // Scorpion
   // ---------------------------------------------------------------------
 
+  // Ports MoveScorpion's :CreateScorp gate ($2e3a in the Rev4 disassembly):
+  // a spawn is only even considered once every SPAWN_CHECK_INTERVAL_SECONDS
+  // (~256 frames), and only while the *current* centipede's live segment
+  // count is below MAX_ELIGIBLE_CENTIPEDE_LENGTH -- replacing a previous
+  // "unlocks after wave 3" approximation with the real, dynamic check.
   private updateScorpion(dt: number): void {
     if (this.scorpion) {
       this.scorpion.update(dt, this.mushrooms);
@@ -515,19 +543,21 @@ export class Game {
       return;
     }
     if (this.flea) return;
-    if (this.currentWave.compositionIndex0 < WAVE_CYCLE.SCORPION_UNLOCKS_AFTER_WAVE_INDEX0) return;
 
     this.scorpionTimer -= dt;
-    if (this.scorpionTimer <= 0) {
-      const fast =
-        this.score >= SCORPION.FAST_SPEED_UNLOCK_SCORE &&
-        this.rng.chance(SCORPION.FAST_SPEED_CHANCE_AFTER_UNLOCK);
-      const speed = fast ? SCORPION.SPEED_FAST : SCORPION.SPEED_SLOW;
-      const row = this.rng.int(ZONES.SCORPION_MIN_ROW, GRID.ROWS);
-      this.scorpion = new Scorpion(row, this.rng.chance(0.5), speed);
-      this.scorpionTimer = randRange(this.rng, [SCORPION.SPAWN_INTERVAL_MIN_MS, SCORPION.SPAWN_INTERVAL_MAX_MS]) / 1000;
-      this.emit('scorpionSpawn');
-    }
+    if (this.scorpionTimer > 0) return;
+    this.scorpionTimer = SCORPION.SPAWN_CHECK_INTERVAL_SECONDS;
+
+    if (this.centipede.totalSegments >= SCORPION.MAX_ELIGIBLE_CENTIPEDE_LENGTH) return;
+    if (!this.rng.chance(SCORPION.SPAWN_CHANCE_PER_CHECK)) return;
+
+    const fast =
+      this.score >= SCORPION.FAST_SPEED_UNLOCK_SCORE &&
+      this.rng.chance(SCORPION.FAST_SPEED_CHANCE_AFTER_UNLOCK);
+    const speed = fast ? SCORPION.SPEED_FAST : SCORPION.SPEED_SLOW;
+    const row = this.rng.int(ZONES.SCORPION_MIN_ROW, GRID.ROWS);
+    this.scorpion = new Scorpion(row, this.rng.chance(0.5), speed);
+    this.emit('scorpionSpawn');
   }
 
   // ---------------------------------------------------------------------

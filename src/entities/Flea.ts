@@ -25,7 +25,7 @@ export class Flea {
     this.hits++;
     if (!this.hitEscalated) {
       this.hitEscalated = true;
-      this.speed *= FLEA.HIT_SPEED_MULTIPLIER;
+      this.speed = FLEA.HIT_ESCALATED_SPEED;
     }
     if (this.hits >= FLEA.SHOTS_TO_KILL) {
       this.alive = false;

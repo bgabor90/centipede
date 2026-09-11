@@ -19,7 +19,12 @@ export class Scorpion {
   update(dt: number, mushrooms: MushroomField): void {
     this.x += this.speed * dt * this.dir;
     const col = Math.round(this.x);
-    if (col >= 1 && col <= GRID.COLS && mushrooms.has(this.row, col)) {
+    // VERIFIED (MoveScorpion, $2ecc): the ROM only poisons a fully-intact
+    // mushroom ("is this an un-poisoned mushroom?") -- a cell that's
+    // already damaged or already poisoned is left alone as the scorpion
+    // passes over it.
+    const cell = mushrooms.get(this.row, col);
+    if (col >= 1 && col <= GRID.COLS && cell && !cell.poisoned && cell.hits === 0) {
       mushrooms.poison(this.row, col);
     }
     if (this.x < -1 || this.x > GRID.COLS + 2) this.alive = false;
