@@ -340,6 +340,27 @@ a large standalone initials editor below it. Rewritten to merge the
 pending entry into the real table (capped at 8 rows, matching
 `drawAttractOverlay`) and blink the in-progress initial in place.
 
+## "GAME OVER" always shows, even for a qualifying score
+
+The game-over branch (~$2457-$248d) draws the literal string 'GAME OVER'
+unconditionally whenever the game ends -- `UpdateHS` (the high-score
+check) and the "GAME OVER" message draw are separate steps that both
+run, not mutually exclusive. The tally-completion code in this project
+(reached once the end-of-life mushroom tally finishes) skipped the
+GAME_OVER state entirely and jumped straight to `beginHighScoreEntry()`
+for a qualifying score, so "GAME OVER" was never shown at all in that
+case. Fixed by always entering GAME_OVER first
+(recording whether it qualifies) and only branching to high-score entry
+or attract mode once the timer -- or an early skip -- finishes. Also
+made the existing "click to skip the wait" input handling safe for the
+qualifying case: it used to jump straight into a brand new game
+unconditionally, which would have silently discarded a deserved
+high-score entry for an impatient click; `skipGameOverWait()` now only
+ever advances to whatever the timer would have led to anyway. Verified
+directly: non-qualifying score -> GAME_OVER -> ATTRACT; qualifying score
+-> GAME_OVER -> HIGH_SCORE_ENTRY; qualifying score with an early skip ->
+still HIGH_SCORE_ENTRY, never bypassed.
+
 ## Explicitly approximated (flagged, not verified anywhere)
 
 - Named RGB hex values for each DBGR color (the source names colors, e.g.

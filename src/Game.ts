@@ -165,6 +165,7 @@ export class Game {
   // alone, so the same deterministic demo just keeps evolving.
   private attractRespawnTimer = 0;
   private gameOverTimer = 0;
+  private gameOverQualifiesForVanityTable = false;
   private pendingInitialScore = 0;
 
   constructor(features: Partial<FeatureFlags> = {}, options: Partial<OperatorOptions> = {}) {
@@ -845,12 +846,15 @@ export class Game {
     this.sideFeedActive = false;
 
     if (this.lives <= 0) {
-      if (this.qualifiesForVanityTable(this.score)) {
-        this.beginHighScoreEntry();
-      } else {
-        this.state = 'GAME_OVER';
-        this.gameOverTimer = 2.5;
-      }
+      // VERIFIED (the game-over branch around $2457-$248d in the Rev4
+      // disassembly): "GAME OVER" is drawn unconditionally whenever the
+      // game ends -- the high-score check (UpdateHS) and the message draw
+      // are separate steps that both run, not mutually exclusive. This
+      // previously skipped straight to high-score entry for a qualifying
+      // score, never showing "GAME OVER" at all in that case.
+      this.state = 'GAME_OVER';
+      this.gameOverTimer = 2.5;
+      this.gameOverQualifiesForVanityTable = this.qualifiesForVanityTable(this.score);
       this.emit('gameOver');
       return;
     }
@@ -944,7 +948,18 @@ export class Game {
 
   private updateGameOver(dt: number): void {
     this.gameOverTimer -= dt;
-    if (this.gameOverTimer <= 0) this.resetAttractMode();
+    if (this.gameOverTimer <= 0) this.finishGameOver();
+  }
+
+  private finishGameOver(): void {
+    if (this.gameOverQualifiesForVanityTable) this.beginHighScoreEntry();
+    else this.resetAttractMode();
+  }
+
+  /** Lets input skip the "GAME OVER" wait early -- never skips past a deserved high-score entry, only the pause before it. */
+  skipGameOverWait(): void {
+    if (this.state !== 'GAME_OVER') return;
+    this.finishGameOver();
   }
 
   private qualifiesForVanityTable(score: number): boolean {

@@ -16,8 +16,13 @@ let paused = false;
 
 function tryStartOrRestart(): void {
   audio.unlock();
-  if (game.state === 'ATTRACT' || game.state === 'GAME_OVER') {
+  if (game.state === 'ATTRACT') {
     game.startNewGame();
+  } else if (game.state === 'GAME_OVER') {
+    // Lets an impatient click skip the "GAME OVER" wait, but never skips
+    // past a deserved high-score entry -- skipGameOverWait() only ever
+    // advances to whatever the timer would have led to anyway.
+    game.skipGameOverWait();
   }
 }
 input.onFireEdge = tryStartOrRestart;
