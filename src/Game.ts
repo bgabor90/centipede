@@ -125,6 +125,8 @@ export class Game {
 
   private tallyQueue: Array<{ row: number; col: number; kind: 'poisoned' | 'damaged' }> = [];
   private tallyTimer = 0;
+  /** The mushroom cell the end-of-life tally just credited, for the renderer to flash. Null when no tally is in progress. */
+  tallyHighlight: { row: number; col: number } | null = null;
   private deathTimer = 0;
   private justClearedWave = false;
   private attractTimer = 0;
@@ -599,6 +601,7 @@ export class Game {
     this.lives--;
     this.shot = null;
     this.buildTallyQueue();
+    this.tallyHighlight = null;
     this.state = 'LIFE_LOST_TALLY';
     this.tallyTimer = 0;
   }
@@ -618,6 +621,7 @@ export class Game {
 
     const next = this.tallyQueue.shift();
     if (next) {
+      this.tallyHighlight = { row: next.row, col: next.col };
       const cell = this.mushrooms.get(next.row, next.col);
       if (cell) {
         cell.poisoned = false;
@@ -630,6 +634,7 @@ export class Game {
     }
 
     // Tally complete.
+    this.tallyHighlight = null;
     this.mushrooms.restoreAll();
     this.spider = null;
     this.flea = null;

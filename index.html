@@ -27,10 +27,12 @@
     #game-root {
       position: relative;
       display: flex;
+      flex-direction: column;
       align-items: center;
       justify-content: center;
       width: 100vw;
       height: 100vh;
+      gap: 8px;
     }
     canvas#screen {
       image-rendering: pixelated;
@@ -41,10 +43,10 @@
       cursor: none;
     }
     #cabinet-note {
-      position: absolute;
-      bottom: 6px;
-      left: 0;
-      right: 0;
+      /* In normal document flow directly below the canvas (not pinned to
+         the viewport bottom) so it can never overlap the canvas's own
+         bottom row, regardless of how large the canvas scales up to. */
+      flex-shrink: 0;
       text-align: center;
       color: #333;
       font-size: 11px;

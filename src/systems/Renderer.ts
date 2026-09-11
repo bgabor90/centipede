@@ -46,7 +46,8 @@ const COLORS = {
   flea: '#ff3c6e',
   scorpion: '#ffb02e',
   scorpionTail: '#cc6a12',
-  shot: '#ffffff',
+  shot: '#ff3333',
+  tallyFlash: '#ffffff',
   gridLine: 'rgba(255,255,255,0.08)',
   disclaimer: '#3a3a3a',
 } as const;
@@ -92,10 +93,10 @@ export class Renderer {
     ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
 
     this.drawHeader(game, palette.eyes);
-    this.drawPlayfieldBorder();
     if (features.showGrid) this.drawGrid();
 
     this.drawMushrooms(game, palette);
+    if (game.state === 'LIFE_LOST_TALLY' && game.tallyHighlight) this.drawTallyHighlight(game.tallyHighlight);
     this.drawCentipede(game, palette);
     if (game.spider) this.drawSpider(game.spider);
     if (game.flea) this.drawFlea(game.flea);
@@ -144,17 +145,31 @@ export class Renderer {
   // so P1 score, HIGH SCORE, and the lives readout are laid out side by
   // side on one line rather than stacked — width is plentiful (30 tile
   // columns), height is not.
+  // Live gameplay shows bare numbers only -- no "1UP"/"HIGH SCORE" text --
+  // per a real captured frame: score + lives at the far left, high score
+  // left-of-center, no labels anywhere. Lives icons use the shooter's own
+  // sprite/colors, not the score/text color.
   private drawHeader(game: Game, textColor: string): void {
-    this.text('1UP', 2, 1, textColor);
-    this.text(pad(game.score, 6), 32, 1, textColor);
-    this.centeredText('HIGH SCORE', CANVAS_W / 2 + CELL, 1, COLORS.hiScore);
-    const hiVal = pad(game.highScore, 6);
-    this.text(hiVal, CANVAS_W / 2 + 56, 1, textColor);
+    const scoreStr = pad(game.score, 6);
+    this.text(scoreStr, 4, 0, textColor);
 
+    // Same sprite as the in-game shooter (SHOOTER_MASK), not a generic
+    // diamond, so the lives readout actually reads as tiny player ships.
+    // The mask's visible content is only ~7px wide despite the 16px mask
+    // canvas (most of that width is transparent margin), so icons need a
+    // tight ~8px center-to-center spacing to sit nearly touching, matching
+    // the reference frame -- the previous 18px spacing (sized for the
+    // mask's full canvas width) left visibly large gaps between them.
+    const livesX = 4 + measureText(scoreStr) + 6;
     const lives = Math.max(0, game.lives - 1);
     for (let i = 0; i < lives; i++) {
-      this.drawDiamond(CANVAS_W - 6 - i * 8, 4, 2, textColor);
+      renderMask(this.putPixel, SHOOTER_MASK, livesX + 4 + i * 8, 4, {
+        F: COLORS.shooterBody,
+        D: COLORS.shooterDetail,
+      });
     }
+
+    this.text(pad(game.highScore, 6), 108, 0, textColor);
   }
 
   // Row 0 (bottom) is documented as unused during gameplay — left blank
@@ -163,13 +178,6 @@ export class Renderer {
     if (game.state === 'ATTRACT' || game.state === 'GAME_OVER') {
       this.centeredText('FAN-MADE - NOT AN ATARI PRODUCT', CANVAS_W / 2, CANVAS_H - 7, COLORS.disclaimer, 1, -1);
     }
-  }
-
-  private drawPlayfieldBorder(): void {
-    const ctx = this.ctx;
-    ctx.strokeStyle = 'rgba(255,255,255,0.25)';
-    ctx.lineWidth = 1;
-    ctx.strokeRect(0.5, HEADER_H + 0.5, CANVAS_W - 1, GRID.ROWS * CELL - 1);
   }
 
   private drawGrid(): void {
@@ -217,6 +225,14 @@ export class Renderer {
         D: cell.poisoned ? palette.legs : palette.eyes,
       });
     });
+  }
+
+  // Manual: after a life is lost, poisoned/damaged mushrooms are credited
+  // one at a time with a visible flash before being restored. tallyHighlight
+  // names the one cell being credited this tick; a solid flash box makes
+  // that mushroom pop for the few frames it holds before the next one lights.
+  private drawTallyHighlight(cell: { row: number; col: number }): void {
+    this.rect(this.px(cell.col), this.py(cell.row), CELL, CELL, COLORS.tallyFlash);
   }
 
   private drawCentipede(game: Game, palette: { body: string; legs: string; eyes: string }): void {
@@ -398,7 +414,11 @@ export class Renderer {
   private drawHighScoreTable(game: Game): void {
     const ctx = this.ctx;
     ctx.fillStyle = 'rgba(0,0,0,0.58)';
-    ctx.fillRect(34, 34, 172, 176);
+    // Tall enough to cover every overlaid line down through "CLICK OR
+    // PRESS FIRE" (y=218 + an 8px glyph + margin) -- it previously ended
+    // at y=210, leaving that last line sitting on the bright mushroom
+    // field instead of the dimmed panel like everything above it.
+    ctx.fillRect(34, 34, 172, 196);
 
     this.centeredText('HIGH SCORES', CANVAS_W / 2, 42, COLORS.attractText);
     game.highScores.forEach((entry, i) => {
