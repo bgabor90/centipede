@@ -34,6 +34,11 @@ static server) — there's no server-side component.
 
 Touch works too (drag to move, tap-and-hold to fire) for tablets.
 
+When the game is idle, it loops through a cabinet-style attract sequence:
+title, scripted demo gameplay, and an eight-entry high-score table. If your
+final score qualifies, the game switches into initials entry; use left/right
+or up/down to change the current letter and Fire/Enter to accept each one.
+
 ## Architecture
 
 ```
@@ -103,8 +108,8 @@ src/
 This is a faithful recreation of the *rules*, not a disassembly-accurate
 port of the original ROM:
 
-- **High score entry** is a single numeric high score in `localStorage`,
-  not the original's 3-letter vanity-table initials screen.
+- **High score persistence** is browser `localStorage`, not cabinet EAROM,
+  but the visible table keeps the original-style eight score/initial rows.
 - **Spider movement** follows the manual's description (diagonal slashes,
   vertical bounce "holding patterns," never reversing net direction,
   deflecting off the centipede) via a randomized state machine — it's a

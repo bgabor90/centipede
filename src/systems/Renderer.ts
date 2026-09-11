@@ -2,7 +2,7 @@ import { GRID } from '../config';
 import type { Game } from '../Game';
 import type { SegmentView } from '../entities/Centipede';
 import type { FeatureFlags } from '../config';
-import { drawBitmapText, measureText } from './BitmapFont';
+import { GLYPH_W, drawBitmapText, measureText } from './BitmapFont';
 import { getWavePalette } from './Palette';
 import { CENTIPEDE_MASK, FLEA_MASK, SCORPION_MASK, SPIDER_MASK, renderMask } from './Sprites';
 
@@ -24,6 +24,7 @@ const COLORS = {
   bg: '#000000',
   scoreText: '#ffffff',
   hiScore: '#3ad6ff',
+  attractText: '#ff8822',
   stem: '#e8e8d8',
   capPoison: '#a64bff',
   poisonedSeg: '#a64bff',
@@ -116,13 +117,16 @@ export class Renderer {
     if (game.flea) this.drawFlea(game.flea);
     if (game.scorpion) this.drawScorpion(game.scorpion);
     if (game.shot) this.drawShot(game.shot);
-    if (game.state === 'PLAYING') this.drawShooter(game.shooter, palette.legs);
+    if (game.state === 'PLAYING' || game.state === 'ATTRACT' || game.state === 'HIGH_SCORE_ENTRY') {
+      this.drawShooter(game.shooter, palette.legs);
+    }
 
     this.drawFooter(game);
 
     if (features.crtFilter) this.drawCrtOverlay();
     if (game.state === 'GAME_OVER') this.drawGameOver();
-    if (game.state === 'ATTRACT') this.drawAttract();
+    if (game.state === 'ATTRACT') this.drawAttract(game);
+    if (game.state === 'HIGH_SCORE_ENTRY') this.drawHighScoreEntry(game);
     if (features.debugOverlay) this.drawDebug(game);
   }
 
@@ -248,11 +252,14 @@ export class Renderer {
 
     renderMask(this.putPixel, CENTIPEDE_MASK, cx, cy, { F: bodyColor }, flip);
 
-    const legPhase = (this.frame >> 3) % 2 === 0;
-    this.rect(cx - 7, cy + (legPhase ? -4 : 3), 1, 1, palette.legs);
-    this.rect(cx - 2, cy + (legPhase ? 3 : -4), 1, 1, palette.legs);
-    this.rect(cx + 1, cy + (legPhase ? -4 : 3), 1, 1, palette.legs);
-    this.rect(cx + 6, cy + (legPhase ? 3 : -4), 1, 1, palette.legs);
+    // Legs cycle their horizontal position (a "conveyor belt" effect along
+    // the body) rather than flapping up and down, stepping at a fast,
+    // slightly-jumpy cadence like the original's frame-by-frame animation.
+    const legShift = Math.floor(this.frame / 4) % 2;
+    this.rect(cx - 7 + legShift, cy - 4, 1, 1, palette.legs);
+    this.rect(cx + 1 + legShift, cy - 4, 1, 1, palette.legs);
+    this.rect(cx - 3 + legShift, cy + 3, 1, 1, palette.legs);
+    this.rect(cx + 5 + legShift, cy + 3, 1, 1, palette.legs);
 
     if (v.isHead) {
       const eyeDx = flip ? -3 : 3;
@@ -315,11 +322,93 @@ export class Renderer {
     this.centeredText('TO CONTINUE', CANVAS_W / 2, CANVAS_H / 2 + 15, '#fff');
   }
 
-  private drawAttract(): void {
-    this.centeredText('CENTIPEDE', CANVAS_W / 2, 64, '#ffe23c', 2);
-    this.centeredText('CLICK OR PRESS FIRE', CANVAS_W / 2, 104, '#fff');
-    this.centeredText('TO START', CANVAS_W / 2, 113, '#fff');
-    this.centeredText('MOUSE = TRAK-BALL', CANVAS_W / 2, 132, COLORS.spiderBody);
+  private drawAttract(game: Game): void {
+    if (game.attractPhase === 'TITLE') {
+      this.drawTitleCard();
+    } else if (game.attractPhase === 'DEMO') {
+      this.centeredText('CLICK OR PRESS FIRE', CANVAS_W / 2, 104, COLORS.attractText);
+      this.centeredText('1 COIN 1 PLAY', CANVAS_W / 2, 218, COLORS.attractText);
+    } else {
+      this.drawHighScoreTable(game);
+    }
+  }
+
+  private drawTitleCard(): void {
+    const ctx = this.ctx;
+    ctx.fillStyle = 'rgba(0,0,0,0.82)';
+    ctx.fillRect(0, HEADER_H, CANVAS_W, GRID.ROWS * CELL);
+    this.centeredText('CENTIPEDE', CANVAS_W / 2, 56, '#ffe23c', 2);
+
+    const palette = getWavePalette(1);
+    for (let i = 0; i < 9; i++) {
+      this.drawSegment(
+        {
+          chainId: 0,
+          index: i,
+          row: 20,
+          col: 10 + i,
+          dir: 1,
+          poisoned: false,
+          isHead: i === 8,
+        },
+        palette
+      );
+    }
+
+    this.centeredText('ARCADE RULES', CANVAS_W / 2, 114, COLORS.attractText);
+    this.centeredText('CLICK OR PRESS FIRE', CANVAS_W / 2, 140, '#fff');
+    this.centeredText('TO START', CANVAS_W / 2, 149, '#fff');
+    this.centeredText('MOUSE = TRAK-BALL', CANVAS_W / 2, 168, COLORS.spiderBody);
+  }
+
+  private drawHighScoreTable(game: Game): void {
+    const ctx = this.ctx;
+    ctx.fillStyle = 'rgba(0,0,0,0.58)';
+    ctx.fillRect(34, 34, 172, 176);
+
+    this.centeredText('HIGH SCORES', CANVAS_W / 2, 42, COLORS.attractText);
+    game.highScores.forEach((entry, i) => {
+      const rank = `${i + 1}`.padStart(2, ' ');
+      const row = `${rank}  ${pad(entry.score, 6)}  ${entry.initials}`;
+      this.centeredText(row, CANVAS_W / 2, 60 + i * 13, COLORS.attractText);
+    });
+
+    this.drawAttractSpinner(CANVAS_W / 2, 153);
+    this.centeredText('1 COIN 1 PLAY', CANVAS_W / 2, 176, COLORS.attractText);
+    this.centeredText(`BONUS EVERY ${game.options.extraLifeScore}`, CANVAS_W / 2, 190, COLORS.attractText);
+    this.centeredText('CLICK OR PRESS FIRE', CANVAS_W / 2, 218, '#fff');
+  }
+
+  private drawAttractSpinner(cx: number, cy: number): void {
+    const spokes = [
+      [0, -5], [4, -4], [5, 0], [4, 4],
+      [0, 5], [-4, 4], [-5, 0], [-4, -4],
+    ] as const;
+    const phase = (this.frame >> 3) % spokes.length;
+    for (let i = 0; i < 4; i++) {
+      const [dx, dy] = spokes[(phase + i) % spokes.length];
+      this.rect(cx + dx, cy + dy, i === 0 ? 2 : 1, i === 0 ? 2 : 1, '#ffffff');
+    }
+  }
+
+  private drawHighScoreEntry(game: Game): void {
+    const ctx = this.ctx;
+    ctx.fillStyle = 'rgba(0,0,0,0.72)';
+    ctx.fillRect(20, 42, 200, 156);
+    this.centeredText('GREAT SCORE', CANVAS_W / 2, 58, COLORS.attractText);
+    this.centeredText('ENTER YOUR INITIALS', CANVAS_W / 2, 78, COLORS.attractText);
+    this.centeredText(pad(game.getPendingInitialScore(), 6), CANVAS_W / 2, 98, '#ffffff');
+
+    const initials = game.initials.join('');
+    const scale = 2;
+    const x = CANVAS_W / 2 - measureText(initials, scale, 2) / 2;
+    drawBitmapText(ctx, initials, x, 126, COLORS.attractText, scale, 2);
+    if ((this.frame >> 4) % 2 === 0) {
+      this.rect(x + game.initialIndex * (GLYPH_W * scale + 2 * scale), 143, GLYPH_W * scale, 2, '#ffffff');
+    }
+
+    this.centeredText('LEFT RIGHT CHANGE', CANVAS_W / 2, 166, '#fff');
+    this.centeredText('FIRE ENTER SELECT', CANVAS_W / 2, 178, '#fff');
   }
 
   drawPausedBanner(): void {

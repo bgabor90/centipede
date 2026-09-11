@@ -67,7 +67,7 @@ paused) attract-mode demo rather than being its own separate screen.
 
 ## Suggested next steps, in priority order
 
-1. Build a real attract-mode sequence: logo/title → live or canned demo
+1. [x] Build a real attract-mode sequence: logo/title → live or canned demo
    gameplay → high-score table (rank, score, 3-letter initials, coin/
    bonus text) → loop. This also unlocks the vanity-table initials-entry
    flow already noted as missing.

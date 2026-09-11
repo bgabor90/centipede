@@ -53,6 +53,7 @@ function frame(now: number): void {
   dt = Math.min(dt, 0.1); // guard against tab-switch stalls
 
   if (input.consumePause()) paused = !paused;
+  handleHighScoreEntryInput();
 
   if (!paused) {
     acc += dt;
@@ -64,6 +65,19 @@ function frame(now: number): void {
 
   renderer.render(game, game.features);
   if (paused) renderer.drawPausedBanner();
+}
+
+function handleHighScoreEntryInput(): void {
+  if (game.state !== 'HIGH_SCORE_ENTRY') return;
+  if (input.consumeKeyPress('arrowleft') || input.consumeKeyPress('a') || input.consumeKeyPress('arrowdown') || input.consumeKeyPress('s')) {
+    game.changeInitial(-1);
+  }
+  if (input.consumeKeyPress('arrowright') || input.consumeKeyPress('d') || input.consumeKeyPress('arrowup') || input.consumeKeyPress('w')) {
+    game.changeInitial(1);
+  }
+  if (input.consumeFirePress() || input.consumeKeyPress('enter')) {
+    game.confirmInitial();
+  }
 }
 
 function step(dt: number): void {

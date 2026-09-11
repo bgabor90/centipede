@@ -25,6 +25,13 @@ import { Flea } from './entities/Flea';
 import { Scorpion } from './entities/Scorpion';
 import type { GameStateName } from './types';
 
+export type AttractPhase = 'TITLE' | 'DEMO' | 'HIGH_SCORES';
+
+export interface VanityEntry {
+  score: number;
+  initials: string;
+}
+
 export type GameEventType =
   | 'fire'
   | 'mushroomDamaged'
@@ -71,6 +78,12 @@ interface WaveSpec {
 }
 
 const TALLY_TICK_SECONDS = 0.06;
+const ATTRACT_PHASE_SECONDS: Record<AttractPhase, number> = {
+  TITLE: 4,
+  DEMO: 12,
+  HIGH_SCORES: 10,
+};
+const INITIALS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ ';
 
 export class Game {
   mushrooms = new MushroomField();
@@ -83,10 +96,14 @@ export class Game {
 
   score = 0;
   highScore = 0;
+  highScores: VanityEntry[] = [];
   lives = LIVES.STARTING_DEFAULT;
   bonusLivesAwarded = 0;
   waveNumber = 1; // 1-based, ever-increasing, for HUD display
   state: GameStateName = 'ATTRACT';
+  attractPhase: AttractPhase = 'TITLE';
+  initials = ['A', 'A', 'A'];
+  initialIndex = 0;
 
   features: FeatureFlags;
   options: OperatorOptions;
@@ -110,12 +127,19 @@ export class Game {
   private tallyTimer = 0;
   private deathTimer = 0;
   private justClearedWave = false;
+  private attractTimer = 0;
+  private attractDemoTimer = 0;
+  private attractFireTimer = 0.2;
+  private gameOverTimer = 0;
+  private pendingInitialScore = 0;
 
   constructor(features: Partial<FeatureFlags> = {}, options: Partial<OperatorOptions> = {}) {
     this.features = { ...DEFAULT_FEATURES, ...features };
     this.options = { ...DEFAULT_OPERATOR_OPTIONS, ...options };
     this.lives = this.options.startingLives;
-    this.highScore = loadHighScore();
+    this.highScores = loadVanityTable();
+    this.highScore = this.highScores[0]?.score ?? 0;
+    this.resetAttractMode();
   }
 
   // ---------------------------------------------------------------------
@@ -148,6 +172,47 @@ export class Game {
     this.emit('gameStart');
   }
 
+  private resetAttractMode(): void {
+    this.state = 'ATTRACT';
+    this.attractPhase = 'TITLE';
+    this.attractTimer = 0;
+    this.attractDemoTimer = 0;
+    this.attractFireTimer = 0.25;
+    this.score = 0;
+    this.lives = this.options.startingLives;
+    this.bonusLivesAwarded = 0;
+    this.waveNumber = 1;
+    this.rng = new Random(0xc37a11de);
+    this.mushrooms.clearAll();
+    this.scatterAttractMushrooms();
+    this.centipede.clear();
+    this.shot = null;
+    this.spider = null;
+    this.flea = null;
+    this.scorpion = null;
+    this.sideFeedActive = false;
+    this.sideFeedTimer = 0;
+    this.sideFeedLinksThisActivation = 0;
+    this.nextSpeedForComposition.clear();
+    this.shooter.reset();
+    this.shooter.moveToward(15, 1.5, 1, this.mushrooms, true);
+    this.currentWave = { compositionIndex0: 0, chainLength: 12, singleHeads: 0, speed: 'fast' };
+    this.spawnWave(this.currentWave);
+    this.spiderTimer = 2.4;
+    this.fleaAllowedTimer = 4;
+    this.scorpionTimer = 6;
+  }
+
+  private scatterAttractMushrooms(): void {
+    for (let row = ZONES.MUSHROOM_MIN_ROW; row <= GRID.ROWS; row++) {
+      for (let col = 1; col <= GRID.COLS; col++) {
+        if ((row + col * 3) % 11 === 0 || (row * 5 + col) % 17 === 0) {
+          this.mushrooms.plant(row, col);
+        }
+      }
+    }
+  }
+
   private scatterInitialMushrooms(): void {
     // A believable opening field: a modest, randomly scattered patch,
     // biased toward the outfield, matching the "sparse early screen" look.
@@ -166,8 +231,14 @@ export class Game {
       case 'PLAYING':
         this.updatePlaying(dt, input);
         break;
+      case 'ATTRACT':
+        this.updateAttract(dt);
+        break;
       case 'LIFE_LOST_TALLY':
         this.updateTally(dt);
+        break;
+      case 'GAME_OVER':
+        this.updateGameOver(dt);
         break;
       default:
         break;
@@ -204,6 +275,53 @@ export class Game {
     this.updateScorpion(dt);
     this.updateSideFeed(dt);
     this.checkShooterCollisions();
+
+    if (this.centipede.isWaveClear && !this.justClearedWave) {
+      this.justClearedWave = true;
+      this.onWaveClear();
+    }
+  }
+
+  private updateAttract(dt: number): void {
+    this.attractTimer += dt;
+    this.attractDemoTimer += dt;
+    this.updateAttractDemo(dt);
+
+    if (this.attractTimer < ATTRACT_PHASE_SECONDS[this.attractPhase]) return;
+    this.attractTimer = 0;
+    if (this.attractPhase === 'TITLE') {
+      this.attractPhase = 'DEMO';
+    } else if (this.attractPhase === 'DEMO') {
+      this.attractPhase = 'HIGH_SCORES';
+    } else {
+      this.resetAttractMode();
+    }
+  }
+
+  private updateAttractDemo(dt: number): void {
+    const t = this.attractDemoTimer;
+    const targetX = 15 + Math.sin(t * 1.05) * 11 + Math.sin(t * 2.2) * 2.5;
+    const targetY = 2.7 + Math.sin(t * 1.6) * 2.3;
+    this.shooter.moveToward(
+      Math.min(GRID.COLS, Math.max(1, targetX)),
+      Math.min(ZONES.SHOOTER_MAX_ROW, Math.max(1, targetY)),
+      dt,
+      this.mushrooms,
+      false
+    );
+
+    this.attractFireTimer -= dt;
+    if (this.attractFireTimer <= 0 && !this.shot) {
+      this.shot = new Shot(this.shooter.col, this.shooter.y + 0.4);
+      this.attractFireTimer = 0.24 + (Math.sin(t * 2.7) + 1) * 0.16;
+    }
+
+    this.updateShot(dt);
+    this.updateCentipede(dt);
+    this.updateSpider(dt);
+    this.updateFlea(dt);
+    this.updateScorpion(dt);
+    this.updateSideFeed(dt);
 
     if (this.centipede.isWaveClear && !this.justClearedWave) {
       this.justClearedWave = true;
@@ -503,9 +621,12 @@ export class Game {
     this.sideFeedActive = false;
 
     if (this.lives <= 0) {
-      this.state = 'GAME_OVER';
-      saveHighScore(this.score);
-      this.highScore = Math.max(this.highScore, this.score);
+      if (this.qualifiesForVanityTable(this.score)) {
+        this.beginHighScoreEntry();
+      } else {
+        this.state = 'GAME_OVER';
+        this.gameOverTimer = 2.5;
+      }
       this.emit('gameOver');
       return;
     }
@@ -583,6 +704,57 @@ export class Game {
   get shooterZoneMaxRow(): number {
     return ZONES.SHOOTER_MAX_ROW;
   }
+
+  private updateGameOver(dt: number): void {
+    this.gameOverTimer -= dt;
+    if (this.gameOverTimer <= 0) this.resetAttractMode();
+  }
+
+  private qualifiesForVanityTable(score: number): boolean {
+    return score > 0 && (this.highScores.length < 8 || score > this.highScores[this.highScores.length - 1].score);
+  }
+
+  private beginHighScoreEntry(): void {
+    this.pendingInitialScore = this.score;
+    this.initials = ['A', 'A', 'A'];
+    this.initialIndex = 0;
+    this.state = 'HIGH_SCORE_ENTRY';
+  }
+
+  changeInitial(delta: number): void {
+    if (this.state !== 'HIGH_SCORE_ENTRY') return;
+    const cur = this.initials[this.initialIndex];
+    const idx = INITIALS.indexOf(cur);
+    const next = (idx + delta + INITIALS.length) % INITIALS.length;
+    this.initials[this.initialIndex] = INITIALS[next];
+  }
+
+  confirmInitial(): void {
+    if (this.state !== 'HIGH_SCORE_ENTRY') return;
+    if (this.initialIndex < 2) {
+      this.initialIndex++;
+      return;
+    }
+    this.insertVanityScore({
+      score: this.pendingInitialScore,
+      initials: this.initials.join('').trimEnd().padEnd(3, ' '),
+    });
+    this.pendingInitialScore = 0;
+    this.resetAttractMode();
+    this.attractPhase = 'HIGH_SCORES';
+  }
+
+  getPendingInitialScore(): number {
+    return this.pendingInitialScore;
+  }
+
+  private insertVanityScore(entry: VanityEntry): void {
+    this.highScores = [...this.highScores, entry]
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 8);
+    this.highScore = this.highScores[0]?.score ?? 0;
+    saveVanityTable(this.highScores);
+  }
 }
 
 function randRange(rng: Random, [min, max]: [number, number]): number {
@@ -590,6 +762,55 @@ function randRange(rng: Random, [min, max]: [number, number]): number {
 }
 
 const HIGH_SCORE_KEY = 'centipede.highScore';
+const VANITY_TABLE_KEY = 'centipede.vanityTable';
+const DEFAULT_VANITY_TABLE: VanityEntry[] = [
+  { score: 12000, initials: 'EJD' },
+  { score: 11000, initials: 'DFT' },
+  { score: 10000, initials: 'CAD' },
+  { score: 9000, initials: 'DCB' },
+  { score: 8000, initials: 'ED ' },
+  { score: 7000, initials: 'DEW' },
+  { score: 6000, initials: 'DFW' },
+  { score: 5000, initials: 'GJR' },
+];
+
+function normalizeVanityTable(entries: VanityEntry[]): VanityEntry[] {
+  return entries
+    .filter((e) => Number.isFinite(e.score) && e.score >= 0)
+    .map((e) => ({
+      score: Math.floor(e.score) % 1_000_000,
+      initials: (e.initials || 'AAA').toUpperCase().slice(0, 3).padEnd(3, ' '),
+    }))
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 8);
+}
+
+function loadVanityTable(): VanityEntry[] {
+  try {
+    const raw = localStorage.getItem(VANITY_TABLE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) return normalizeVanityTable(parsed);
+    }
+    const oldHigh = loadHighScore();
+    if (oldHigh > DEFAULT_VANITY_TABLE[0].score) {
+      return normalizeVanityTable([{ score: oldHigh, initials: 'AAA' }, ...DEFAULT_VANITY_TABLE]);
+    }
+  } catch {
+    /* localStorage unavailable or corrupt table: fall back to defaults */
+  }
+  return DEFAULT_VANITY_TABLE.slice();
+}
+
+function saveVanityTable(entries: VanityEntry[]): void {
+  try {
+    localStorage.setItem(VANITY_TABLE_KEY, JSON.stringify(normalizeVanityTable(entries)));
+    const high = entries[0]?.score ?? 0;
+    if (high > 0) localStorage.setItem(HIGH_SCORE_KEY, String(high));
+  } catch {
+    /* localStorage unavailable (e.g. private mode) — not fatal */
+  }
+}
 
 function loadHighScore(): number {
   try {
@@ -597,14 +818,5 @@ function loadHighScore(): number {
     return raw ? parseInt(raw, 10) || 0 : 0;
   } catch {
     return 0;
-  }
-}
-
-function saveHighScore(score: number): void {
-  try {
-    const cur = loadHighScore();
-    if (score > cur) localStorage.setItem(HIGH_SCORE_KEY, String(score));
-  } catch {
-    /* localStorage unavailable (e.g. private mode) — not fatal */
   }
 }
