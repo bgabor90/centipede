@@ -203,8 +203,17 @@ export const SCORPION = {
 } as const;
 
 export const SIDE_FEED = {
-  ENTRY_ROW: 7,
+  // VERIFIED (CreateHead's :InitSlot, $2bf9 in the Rev4 disassembly): sets
+  // the new head's vertical position to raw $40, with an explicit comment
+  // "row 8" -- our own bottom-up row numbering convention matches this
+  // directly (value/8 = row). Corrected from an unsourced guess of 7.
+  ENTRY_ROW: 8,
   FIRST_INTERVAL_MS: 3000,
+  // VERIFIED-BY-ANALOGY: CreateHead reduces its cooldown by a raw 8 units
+  // (frames) per new head, down to a floor of $60 (96 frames, "~1.5
+  // seconds" per the source's own comment) -- 8/60s is ~0.133s, closely
+  // matching the guide's precise "1/8 second" (0.125s) figure already
+  // used here, so this is corroboration rather than a source of new values.
   INTERVAL_DECREASE_STAGE1_MS: 125, // "1/8 second" per link, first ~12 links
   STAGE1_LINK_COUNT: 12,
   STAGE2_MIN_INTERVAL_MS: 1375, // "one every 1-3/8 seconds" floor before stage 2 grinds slower

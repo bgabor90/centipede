@@ -130,6 +130,12 @@ Fetched and cross-checked this session (see citations in `config.ts` /
 - **Mushroom-tally tick rate**: `RestoreShroom` ($2cf3) credits one
   mushroom every 8 frames (`frame_ctr & 7 == 0`, ~0.133s at 60fps). Our
   tally timer was 0.06s -- roughly twice as fast as the real cadence.
+- **Side Feed entry row**: `CreateHead`'s `:InitSlot` ($2bf9) sets a new
+  head's vertical position with an explicit "row 8" comment; our
+  ENTRY_ROW was an unsourced guess of 7. Also cross-confirmed (not
+  overridden) the existing "1/8 second per link" decay rate: the ROM
+  reduces its cooldown by 8 raw frames per link, matching within
+  rounding.
 
 ## Behaviors kept from the Video Master's Guide (not overridden)
 
