@@ -127,6 +127,9 @@ Fetched and cross-checked this session (see citations in `config.ts` /
   scorpion's own movement routine never calls `ChkPlyrColl` at all --
   touching it doesn't kill the player, matching the manual (only the
   spider, flea, and centipede do) and requiring no change there.
+- **Mushroom-tally tick rate**: `RestoreShroom` ($2cf3) credits one
+  mushroom every 8 frames (`frame_ctr & 7 == 0`, ~0.133s at 60fps). Our
+  tally timer was 0.06s -- roughly twice as fast as the real cadence.
 
 ## Behaviors kept from the Video Master's Guide (not overridden)
 

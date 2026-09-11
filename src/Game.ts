@@ -77,7 +77,10 @@ interface WaveSpec {
   speed: 'slow' | 'fast';
 }
 
-const TALLY_TICK_SECONDS = 0.06;
+// VERIFIED (RestoreShroom, $2cf3 in the Rev4 disassembly): the mushroom
+// tally credits one cell every 8 frames (`frame_ctr & 7 == 0`), not the
+// previous, roughly-2x-faster 0.06s guess.
+const TALLY_TICK_SECONDS = 8 / 60;
 const ATTRACT_PHASE_SECONDS: Record<AttractPhase, number> = {
   TITLE: 4,
   DEMO: 12,
