@@ -157,6 +157,25 @@ export const FLEA_MASK: Mask = [
   '......FF........',
 ];
 
+/**
+ * Shooter / player "bug blaster".
+ *
+ * The reference sheet stores this as the lower half of the upper-left
+ * player/shot cell: a narrow pale body with red face/cowl detail. It is
+ * static in the sheet, so the renderer uses this single mask as the built-in
+ * fallback when no custom shooter cell is configured.
+ */
+export const SHOOTER_MASK: Mask = [
+  '.......F........',
+  '......FFF.......',
+  '.....DDFDD......',
+  '....FDDFDDF.....',
+  '....FFFFFFF.....',
+  '.....FFFFF......',
+  '......FFF.......',
+  '......FFF.......',
+];
+
 export const MASK_W = 16;
 export const MASK_H = 8;
 

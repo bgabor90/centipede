@@ -4,7 +4,7 @@ import type { SegmentView } from '../entities/Centipede';
 import type { FeatureFlags } from '../config';
 import { GLYPH_W, drawBitmapText, measureText } from './BitmapFont';
 import { getWavePalette } from './Palette';
-import { CENTIPEDE_MASK, FLEA_MASK, SCORPION_MASK, SPIDER_FRAMES, type Mask, renderMask } from './Sprites';
+import { CENTIPEDE_MASK, FLEA_MASK, SCORPION_MASK, SHOOTER_MASK, SPIDER_FRAMES, type Mask, renderMask } from './Sprites';
 import { getCustomSpriteSheet, pickFrame } from './spriteMapping';
 
 // Verified screen/tile geometry (6502disassembly.com/va-centipede/graphics.html):
@@ -32,6 +32,8 @@ const COLORS = {
   spiderBody: '#00f01d',
   spiderLeg: '#fffbc0',
   spiderCenter: '#ff1a0d',
+  shooterBody: '#fffbc0',
+  shooterDetail: '#ff1a0d',
   flea: '#ff3c6e',
   scorpion: '#ffb02e',
   scorpionTail: '#cc6a12',
@@ -342,7 +344,7 @@ export class Renderer {
     this.rect(cx, cy - 3, 1, 6, COLORS.shot);
   }
 
-  private drawShooter(shooter: Game['shooter'], color: string): void {
+  private drawShooter(shooter: Game['shooter'], _color: string): void {
     const { cx, cy } = this.center(shooter.x, shooter.y);
 
     const custom = getCustomSpriteSheet();
@@ -352,7 +354,10 @@ export class Renderer {
       return;
     }
 
-    this.drawDiamond(cx, cy, 3, color);
+    renderMask(this.putPixel, SHOOTER_MASK, cx, cy, {
+      F: COLORS.shooterBody,
+      D: COLORS.shooterDetail,
+    });
   }
 
   private drawCrtOverlay(): void {
