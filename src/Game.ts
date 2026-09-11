@@ -132,6 +132,11 @@ export class Game {
   tallyHighlight: { row: number; col: number } | null = null;
   private deathTimer = 0;
   private justClearedWave = false;
+  // VERIFIED (:IncSpeed, $3072 in the Rev4 disassembly): clearing a wave
+  // sets a ~64-frame (~1.07s) pause (`delay_ctr`) before the next wave's
+  // centipede appears -- everything else (spider/flea/scorpion/shot)
+  // keeps running during it, matching CreateHead's own delay_ctr gate.
+  private waveDelayTimer = 0;
   private attractTimer = 0;
   // Ports AttractMove ($2119 in the Rev4 disassembly): the demo-mode player
   // moves in a straight line and only reverses when it nears a playfield
@@ -180,6 +185,7 @@ export class Game {
     this.sideFeedTimer = 0;
     this.sideFeedLinksThisActivation = 0;
     this.nextSpeedForComposition.clear();
+    this.waveDelayTimer = 0;
     this.shooter.reset();
     this.currentWave = { compositionIndex0: 0, chainLength: 12, singleHeads: 0, speed: 'fast' };
     this.spawnWave(this.currentWave);
@@ -307,6 +313,7 @@ export class Game {
       this.justClearedWave = true;
       this.onWaveClear();
     }
+    this.updateWaveDelay(dt);
   }
 
   private updateAttract(dt: number): void {
@@ -366,6 +373,7 @@ export class Game {
       this.justClearedWave = true;
       this.onWaveClear();
     }
+    this.updateWaveDelay(dt);
   }
 
   // ---------------------------------------------------------------------
@@ -758,7 +766,13 @@ export class Game {
 
     this.currentWave = next;
     this.waveNumber++;
-    this.spawnWave(next);
+    this.waveDelayTimer = 64 / 60;
+  }
+
+  private updateWaveDelay(dt: number): void {
+    if (this.waveDelayTimer <= 0) return;
+    this.waveDelayTimer -= dt;
+    if (this.waveDelayTimer <= 0) this.spawnWave(this.currentWave);
   }
 
   private spawnWave(spec: WaveSpec): void {

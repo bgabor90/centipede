@@ -142,6 +142,15 @@ Fetched and cross-checked this session (see citations in `config.ts` /
   1-12) that `countInfield()` was reusing. Added a dedicated
   `LOW_MUSHROOM_ZONE_MAX_ROW` for the flea check and left the general
   infield zone constant (used for other purposes) untouched.
+- **Wave-clear pause**: `:IncSpeed` ($3072) sets a ~64-frame (~1.07s)
+  `delay_ctr` pause when the last segment of a wave is destroyed, before
+  the next wave's centipede appears (`CreateHead` itself also checks
+  `delay_ctr` and won't spawn a new head during it). `onWaveClear()`
+  previously called `spawnWave` immediately with no pause at all. Also
+  independently re-derived, then found already correctly implemented:
+  the manual's "fast waves always repeat the composition of the
+  preceding slow wave" pairing rule, and `InitCentipede`'s score-gated
+  ($40,000) slow/fast assignment -- both already matched.
 
 ## Behaviors kept from the Video Master's Guide (not overridden)
 
