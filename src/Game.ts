@@ -798,18 +798,32 @@ export class Game {
     return false;
   }
 
+  // VERIFIED (ExplodePlayer, $2cc8-$2cd2): the thing the player collided
+  // with is deactivated in the same moment -- silently (no score, and for
+  // a centipede segment, no mushroom left behind, unlike a shot kill).
   private checkShooterCollisions(): void {
     if (this.features.godMode) return;
     const sx = this.shooter.x;
     const sy = this.shooter.y;
 
     for (const chain of this.centipede.chains) {
-      for (const v of chain.getSegmentViews()) {
-        if (this.touchesPlayer(v.col - sx, v.row - sy, false)) return this.killPlayer();
+      const views = chain.getSegmentViews();
+      for (const v of views) {
+        if (this.touchesPlayer(v.col - sx, v.row - sy, false)) {
+          this.centipede.removeSegmentAt(chain, v.index);
+          return this.killPlayer();
+        }
       }
     }
-    if (this.spider && this.touchesPlayer(this.spider.x - sx, this.spider.y - sy, true)) return this.killPlayer();
-    if (this.flea && this.touchesPlayer(this.flea.col - sx, this.flea.y - sy, false)) return this.killPlayer();
+    if (this.spider && this.touchesPlayer(this.spider.x - sx, this.spider.y - sy, true)) {
+      this.spider = null;
+      this.spiderTimer = SPIDER.RESPAWN_AFTER_KILL_MS / 1000;
+      return this.killPlayer();
+    }
+    if (this.flea && this.touchesPlayer(this.flea.col - sx, this.flea.y - sy, false)) {
+      this.flea = null;
+      return this.killPlayer();
+    }
   }
 
   private killPlayer(): void {

@@ -319,6 +319,18 @@ export class CentipedeManager {
     };
   }
 
+  // VERIFIED (ExplodePlayer, $2cc8-$2cd2): whatever the player collided
+  // with is deactivated in the same moment the player dies -- `sta
+  // mobj_pict,x` on the colliding object, with no score added and (unlike
+  // a shot kill) no mushroom planted in its place.
+  removeSegmentAt(chain: Chain, index: number): void {
+    const { newChain } = chain.destroySegmentAt(index, CENTIPEDE_SPEED.FAST);
+    if (chain.isEmpty) {
+      this.chains = this.chains.filter((c) => c !== chain);
+    }
+    if (newChain) this.chains.push(newChain);
+  }
+
   /** True if any live segment currently occupies (row, col) — used by shooter collision & spider deflection. */
   collidesWithCell(row: number, col: number, tolerance = 0.5): boolean {
     for (const chain of this.chains) {

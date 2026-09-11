@@ -379,6 +379,21 @@ directly: non-qualifying score -> GAME_OVER -> ATTRACT; qualifying score
 -> GAME_OVER -> HIGH_SCORE_ENTRY; qualifying score with an early skip ->
 still HIGH_SCORE_ENTRY, never bypassed.
 
+## Colliding entity is destroyed along with the player
+
+`ExplodePlayer` ($2cc8-$2cd2) deactivates whatever the player collided
+with in the same moment the player dies (`sta mobj_pict,x` on the
+colliding object) -- silently: no score added, and for a centipede
+segment, no mushroom left behind (unlike a shot kill, which does both).
+`checkShooterCollisions()` previously only killed the player, leaving
+the centipede segment/spider/flea that hit them completely untouched.
+Added `CentipedeManager.removeSegmentAt()` (splits the chain the same
+way a shot would, but skips scoring and mushroom-planting) and wired all
+three collision cases to remove the offending entity. Verified directly:
+all three cases leave score unchanged, remove the entity (segment count
+drops, spider/flea become null), and centipede collisions plant no
+mushroom.
+
 ## Explicitly approximated (flagged, not verified anywhere)
 
 - Named RGB hex values for each DBGR color (the source names colors, e.g.
