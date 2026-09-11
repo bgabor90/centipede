@@ -388,19 +388,16 @@ export class Renderer {
   private drawAttractOverlay(game: Game): void {
     const ctx = this.ctx;
     ctx.fillStyle = 'rgba(0,0,0,0.58)';
-    ctx.fillRect(34, 4, 172, 220);
+    ctx.fillRect(34, 4, 172, 198);
 
     this.centeredText('HIGH SCORES', CANVAS_W / 2, 10, COLORS.attractText);
     game.highScores.forEach((entry, i) => {
-      const rank = `${i + 1}`.padStart(2, ' ');
-      const row = `${rank}  ${pad(entry.score, 6)}  ${entry.initials}`;
+      const row = `${pad(entry.score, 6)}  ${entry.initials}`;
       this.centeredText(row, CANVAS_W / 2, 20 + i * 9, COLORS.attractText);
     });
 
     this.centeredText('1 COIN 1 PLAY', CANVAS_W / 2, 176, COLORS.attractText);
     this.centeredText(`BONUS EVERY ${game.options.extraLifeScore}`, CANVAS_W / 2, 188, COLORS.attractText);
-    this.centeredText('CLICK OR PRESS FIRE TO START', CANVAS_W / 2, 202, '#fff');
-    this.centeredText('MOUSE / TOUCH = TRAK-BALL', CANVAS_W / 2, 212, '#fff');
   }
 
   private drawHighScoreEntry(game: Game): void {
