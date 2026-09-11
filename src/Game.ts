@@ -25,8 +25,6 @@ import { Flea } from './entities/Flea';
 import { Scorpion } from './entities/Scorpion';
 import type { GameStateName } from './types';
 
-export type AttractPhase = 'TITLE' | 'DEMO' | 'HIGH_SCORES';
-
 export interface VanityEntry {
   score: number;
   initials: string;
@@ -81,11 +79,6 @@ interface WaveSpec {
 // tally credits one cell every 8 frames (`frame_ctr & 7 == 0`), not the
 // previous, roughly-2x-faster 0.06s guess.
 const TALLY_TICK_SECONDS = 8 / 60;
-const ATTRACT_PHASE_SECONDS: Record<AttractPhase, number> = {
-  TITLE: 4,
-  DEMO: 12,
-  HIGH_SCORES: 10,
-};
 const INITIALS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ ';
 
 export class Game {
@@ -104,7 +97,6 @@ export class Game {
   bonusLivesAwarded = 0;
   waveNumber = 1; // 1-based, ever-increasing, for HUD display
   state: GameStateName = 'ATTRACT';
-  attractPhase: AttractPhase = 'TITLE';
   initials = ['A', 'A', 'A'];
   initialIndex = 0;
 
@@ -137,7 +129,6 @@ export class Game {
   // centipede appears -- everything else (spider/flea/scorpion/shot)
   // keeps running during it, matching CreateHead's own delay_ctr gate.
   private waveDelayTimer = 0;
-  private attractTimer = 0;
   // Ports AttractMove ($2119 in the Rev4 disassembly): the demo-mode player
   // moves in a straight line and only reverses when it nears a playfield
   // edge (a deterministic bounce, not a sine wander), and that movement
@@ -146,6 +137,13 @@ export class Game {
   private attractHVel: 1 | -1 = 1;
   private attractVVel: 1 | -1 = 1;
   private attractFrame = 0;
+  // ChkPlyrColl is called unconditionally from the centipede/spider/flea
+  // update routines regardless of attract_mode, so the real demo gun can be
+  // "killed" mid-loop. Rather than ending the loop, the cabinet briefly
+  // pauses (ExplodePlayer's delay_ctr = 48 frames, ~0.8s) and respawns a
+  // fresh centipede/spider/flea; score and the mushroom field are left
+  // alone, so the same deterministic demo just keeps evolving.
+  private attractRespawnTimer = 0;
   private gameOverTimer = 0;
   private pendingInitialScore = 0;
 
@@ -198,11 +196,10 @@ export class Game {
 
   private resetAttractMode(): void {
     this.state = 'ATTRACT';
-    this.attractPhase = 'TITLE';
-    this.attractTimer = 0;
     this.attractHVel = 1;
     this.attractVVel = 1;
     this.attractFrame = 0;
+    this.attractRespawnTimer = 0;
     this.score = 0;
     this.lives = this.options.startingLives;
     this.bonusLivesAwarded = 0;
@@ -228,13 +225,19 @@ export class Game {
     this.scorpionTimer = SCORPION.SPAWN_CHECK_INTERVAL_SECONDS;
   }
 
+  // Ports InitPlay's mushroom-scatter loop ($28e4-$2934 in the Rev4
+  // disassembly): 46 placements, walking one row closer to the bottom each
+  // time (wrapping back to the starting row once it gets too close), with a
+  // fully random column on every placement -- replacing a fixed checkerboard
+  // pattern that didn't resemble the ROM's scatter at all. Still driven by
+  // the fixed-seed `this.rng`, so the resulting layout stays reproducible.
   private scatterAttractMushrooms(): void {
-    for (let row = ZONES.MUSHROOM_MIN_ROW; row <= GRID.ROWS; row++) {
-      for (let col = 1; col <= GRID.COLS; col++) {
-        if ((row + col * 3) % 11 === 0 || (row * 5 + col) % 17 === 0) {
-          this.mushrooms.plant(row, col);
-        }
-      }
+    let row = GRID.ROWS - 3;
+    for (let i = 0; i < 46; i++) {
+      const col = this.rng.int(1, GRID.COLS);
+      this.mushrooms.plant(row, col);
+      row--;
+      if (row < ZONES.MUSHROOM_MIN_ROW) row = GRID.ROWS - 3;
     }
   }
 
@@ -324,19 +327,13 @@ export class Game {
     this.updateWaveDelay(dt);
   }
 
+  // The real ROM has no exclusive "title card" / "demo" / "high scores"
+  // sequence -- the high-score table, coin/credit line, and bonus-life
+  // reminder are playfield-tile text shown continuously, layered under the
+  // live (never-paused) demo the whole time attract_mode is set. Renderer's
+  // drawAttractOverlay reproduces that; there's no phase state to cycle here.
   private updateAttract(dt: number): void {
-    this.attractTimer += dt;
     this.updateAttractDemo(dt);
-
-    if (this.attractTimer < ATTRACT_PHASE_SECONDS[this.attractPhase]) return;
-    this.attractTimer = 0;
-    if (this.attractPhase === 'TITLE') {
-      this.attractPhase = 'DEMO';
-    } else if (this.attractPhase === 'DEMO') {
-      this.attractPhase = 'HIGH_SCORES';
-    } else {
-      this.resetAttractMode();
-    }
   }
 
   // VERIFIED (6502disassembly.com/va-centipede/Centipede_rev4.html,
@@ -347,6 +344,29 @@ export class Game {
   // attractFrame's bit-7 check) while the centipede/spider/flea/shot
   // keep running regardless, exactly as they do in the original MainLoop.
   private updateAttractDemo(dt: number): void {
+    // ChkPlyrColl runs unconditionally from the centipede/spider/flea
+    // update routines below regardless of attract_mode, so the demo gun can
+    // die mid-loop. On a hit: pause everything briefly (mirroring
+    // ExplodePlayer's 48-frame delay_ctr), then respawn a fresh centipede/
+    // spider/flea the way CheckEnd's post-delay path does -- score and the
+    // mushroom field are untouched, so the same deterministic run continues.
+    if (this.attractRespawnTimer > 0) {
+      this.attractRespawnTimer -= dt;
+      return;
+    }
+    if (this.checkAttractCollision()) {
+      this.emit('playerDeath');
+      this.centipede.clear();
+      this.spider = null;
+      this.flea = null;
+      this.scorpion = null;
+      this.shot = null;
+      this.shooter.reset();
+      this.spawnWave(this.currentWave);
+      this.attractRespawnTimer = 48 / 60;
+      return;
+    }
+
     this.attractFrame = (this.attractFrame + 1) & 0xff;
     if ((this.attractFrame & 0x80) === 0) {
       const ATTRACT_HORIZ_MARGIN = 3; // ~ the ROM's $1c/$e4 edge thresholds, scaled to our 30-col width
@@ -676,6 +696,20 @@ export class Game {
     return ax + ay < sumLimit;
   }
 
+  /** Same hitbox as checkShooterCollisions, but reporting rather than killing -- used by the attract-mode demo, which has no lives to lose. */
+  private checkAttractCollision(): boolean {
+    const sx = this.shooter.x;
+    const sy = this.shooter.y;
+    for (const chain of this.centipede.chains) {
+      for (const v of chain.getSegmentViews()) {
+        if (this.touchesPlayer(v.col - sx, v.row - sy, false)) return true;
+      }
+    }
+    if (this.spider && this.touchesPlayer(this.spider.x - sx, this.spider.y - sy, true)) return true;
+    if (this.flea && this.touchesPlayer(this.flea.col - sx, this.flea.y - sy, false)) return true;
+    return false;
+  }
+
   private checkShooterCollisions(): void {
     if (this.features.godMode) return;
     const sx = this.shooter.x;
@@ -875,7 +909,6 @@ export class Game {
     });
     this.pendingInitialScore = 0;
     this.resetAttractMode();
-    this.attractPhase = 'HIGH_SCORES';
   }
 
   getPendingInitialScore(): number {

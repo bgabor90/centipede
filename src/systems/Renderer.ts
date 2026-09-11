@@ -95,6 +95,14 @@ export class Renderer {
     this.drawHeader(game, palette.eyes);
     if (features.showGrid) this.drawGrid();
 
+    // Real hardware writes the high-score table, coin/credit line, and
+    // bonus-life reminder into playfield tile RAM -- the same background
+    // layer as mushrooms -- so the still-running demo's motion objects
+    // (drawn on top of tiles) pass in front of that text rather than a
+    // screen blocking the demo. Drawing this before the entities below
+    // reproduces that layering.
+    if (game.state === 'ATTRACT') this.drawAttractOverlay(game);
+
     this.drawMushrooms(game, palette);
     if (game.state === 'LIFE_LOST_TALLY' && game.tallyHighlight) this.drawTallyHighlight(game.tallyHighlight);
     this.drawCentipede(game, palette);
@@ -110,7 +118,6 @@ export class Renderer {
 
     if (features.crtFilter) this.drawCrtOverlay();
     if (game.state === 'GAME_OVER') this.drawGameOver();
-    if (game.state === 'ATTRACT') this.drawAttract(game);
     if (game.state === 'HIGH_SCORE_ENTRY') this.drawHighScoreEntry(game);
     if (features.debugOverlay) this.drawDebug(game);
   }
@@ -372,65 +379,26 @@ export class Renderer {
     this.centeredText('TO CONTINUE', CANVAS_W / 2, CANVAS_H / 2 + 15, '#fff');
   }
 
-  private drawAttract(game: Game): void {
-    if (game.attractPhase === 'TITLE') {
-      this.drawTitleCard();
-    } else if (game.attractPhase === 'DEMO') {
-      this.centeredText('CLICK OR PRESS FIRE', CANVAS_W / 2, 104, COLORS.attractText);
-      this.centeredText('1 COIN 1 PLAY', CANVAS_W / 2, 218, COLORS.attractText);
-    } else {
-      this.drawHighScoreTable(game);
-    }
-  }
-
-  private drawTitleCard(): void {
-    const ctx = this.ctx;
-    ctx.fillStyle = 'rgba(0,0,0,0.82)';
-    ctx.fillRect(0, HEADER_H, CANVAS_W, GRID.ROWS * CELL);
-    this.centeredText('CENTIPEDE', CANVAS_W / 2, 56, '#ffe23c', 2);
-
-    const palette = getWavePalette(1);
-    for (let i = 0; i < 9; i++) {
-      this.drawSegment(
-        {
-          chainId: 0,
-          index: i,
-          row: 20,
-          col: 10 + i,
-          dir: 1,
-          poisoned: false,
-          isHead: i === 8,
-        },
-        palette
-      );
-    }
-
-    this.centeredText('ARCADE RULES', CANVAS_W / 2, 114, COLORS.attractText);
-    this.centeredText('CLICK OR PRESS FIRE', CANVAS_W / 2, 140, '#fff');
-    this.centeredText('TO START', CANVAS_W / 2, 149, '#fff');
-    this.centeredText('MOUSE = TRAK-BALL', CANVAS_W / 2, 168, COLORS.spiderBody);
-  }
-
-  private drawHighScoreTable(game: Game): void {
-    const ctx = this.ctx;
-    ctx.fillStyle = 'rgba(0,0,0,0.58)';
-    // Tall enough to cover every overlaid line down through "CLICK OR
-    // PRESS FIRE" (y=218 + an 8px glyph + margin) -- it previously ended
-    // at y=210, leaving that last line sitting on the bright mushroom
-    // field instead of the dimmed panel like everything above it.
-    ctx.fillRect(34, 34, 172, 196);
-
-    this.centeredText('HIGH SCORES', CANVAS_W / 2, 42, COLORS.attractText);
+  // Ports the always-on-screen attract text from ChkGameStart/
+  // DrawBonusText/ShowScores: the high-score table, coin/credit line, and
+  // bonus-life reminder are all shown continuously, together, on top of
+  // the live demo -- never an exclusive splash/table screen that hides it
+  // (as this renderer used to cycle through), and never behind a dimming
+  // backdrop the real tile layer doesn't have.
+  private drawAttractOverlay(game: Game): void {
+    this.centeredText('HIGH SCORES', CANVAS_W / 2, 10, COLORS.attractText);
     game.highScores.forEach((entry, i) => {
       const rank = `${i + 1}`.padStart(2, ' ');
       const row = `${rank}  ${pad(entry.score, 6)}  ${entry.initials}`;
-      this.centeredText(row, CANVAS_W / 2, 60 + i * 13, COLORS.attractText);
+      this.centeredText(row, CANVAS_W / 2, 20 + i * 9, COLORS.attractText);
     });
 
-    this.drawAttractSpinner(CANVAS_W / 2, 153);
+    this.drawAttractSpinner(CANVAS_W / 2, 100);
+
     this.centeredText('1 COIN 1 PLAY', CANVAS_W / 2, 176, COLORS.attractText);
-    this.centeredText(`BONUS EVERY ${game.options.extraLifeScore}`, CANVAS_W / 2, 190, COLORS.attractText);
-    this.centeredText('CLICK OR PRESS FIRE', CANVAS_W / 2, 218, '#fff');
+    this.centeredText(`BONUS EVERY ${game.options.extraLifeScore}`, CANVAS_W / 2, 188, COLORS.attractText);
+    this.centeredText('CLICK OR PRESS FIRE TO START', CANVAS_W / 2, 202, '#fff');
+    this.centeredText('MOUSE / TOUCH = TRAK-BALL', CANVAS_W / 2, 212, '#fff');
   }
 
   private drawAttractSpinner(cx: number, cy: number): void {
