@@ -83,6 +83,12 @@ const TALLY_TICK_SECONDS = 8 / 60;
 // counts down one step per frame from $ff to $f9 (6 steps) before the
 // slot clears -- a brief flash rather than an instant disappearance.
 const KILL_FLASH_SECONDS = 6 / 60;
+// Real hardware leaves the point-value graphic up until the spider's
+// motion-object slot is reused for its next spawn (the ~4s respawn gap);
+// showing it that long would read as lingering clutter on a modern
+// display, so this is a tuned, shorter duration -- the exact original
+// hold time isn't independently specified anywhere found.
+const SPIDER_POINTS_POPUP_SECONDS = 1;
 const INITIALS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ ';
 
 export class Game {
@@ -131,6 +137,11 @@ export class Game {
   // per frame (no extra gating) before the slot is finally cleared -- a
   // brief ~6-frame (~0.1s) flash, not the instant disappearance we had.
   killFlashes: Array<{ row: number; col: number; timer: number }> = [];
+  // VERIFIED (EXPLOD's :ExplDone, $2711-$271f): once the spider's own kill
+  // flash finishes, its motion-object slot is reused to display the exact
+  // point value earned (300/900/600, per the distance tiers computed in
+  // CalcSpdrPts) at the kill location, rather than just disappearing.
+  spiderPointsPopup: { row: number; col: number; text: string; delay: number; timer: number } | null = null;
   private deathTimer = 0;
   private justClearedWave = false;
   // VERIFIED (:IncSpeed, $3072 in the Rev4 disassembly): clearing a wave
@@ -194,6 +205,7 @@ export class Game {
     this.nextSpeedForComposition.clear();
     this.waveDelayTimer = 0;
     this.killFlashes = [];
+    this.spiderPointsPopup = null;
     this.shooter.reset();
     this.currentWave = { compositionIndex0: 0, chainLength: 12, singleHeads: 0, speed: 'fast' };
     this.spawnWave(this.currentWave);
@@ -227,6 +239,7 @@ export class Game {
     this.sideFeedLinksThisActivation = 0;
     this.nextSpeedForComposition.clear();
     this.killFlashes = [];
+    this.spiderPointsPopup = null;
     this.shooter.reset();
     this.shooter.moveToward(15, 1.5, 1, this.mushrooms, true);
     this.currentWave = { compositionIndex0: 0, chainLength: 12, singleHeads: 0, speed: 'fast' };
@@ -337,6 +350,7 @@ export class Game {
     }
     this.updateWaveDelay(dt);
     this.updateKillFlashes(dt);
+    this.updateSpiderPointsPopup(dt);
   }
 
   // The real ROM has no exclusive "title card" / "demo" / "high scores"
@@ -415,6 +429,7 @@ export class Game {
     }
     this.updateWaveDelay(dt);
     this.updateKillFlashes(dt);
+    this.updateSpiderPointsPopup(dt);
   }
 
   // ---------------------------------------------------------------------
@@ -498,6 +513,13 @@ export class Game {
         this.addScore(points);
         this.emit('spiderHit', points);
         this.spawnKillFlash(this.spider.row, this.spider.col);
+        this.spiderPointsPopup = {
+          row: this.spider.row,
+          col: this.spider.col,
+          text: String(points),
+          delay: KILL_FLASH_SECONDS,
+          timer: SPIDER_POINTS_POPUP_SECONDS,
+        };
         this.spider = null;
         this.spiderTimer = SPIDER.RESPAWN_AFTER_KILL_MS / 1000;
         this.shot = null;
@@ -514,6 +536,17 @@ export class Game {
     if (this.killFlashes.length === 0) return;
     for (const flash of this.killFlashes) flash.timer -= dt;
     this.killFlashes = this.killFlashes.filter((f) => f.timer > 0);
+  }
+
+  private updateSpiderPointsPopup(dt: number): void {
+    const popup = this.spiderPointsPopup;
+    if (!popup) return;
+    if (popup.delay > 0) {
+      popup.delay -= dt;
+      return;
+    }
+    popup.timer -= dt;
+    if (popup.timer <= 0) this.spiderPointsPopup = null;
   }
 
   /** All scoring flows through here so the six-digit register wrap (manual: "the millionth point earned makes the register turn over to zero") and the extra-life check both stay in one place. */

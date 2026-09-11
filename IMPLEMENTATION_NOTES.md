@@ -285,6 +285,24 @@ art for an animation that's under a fifth of a second on real hardware
 anyway. Verified directly: flash persists for exactly 6 frames then
 clears.
 
+## Spider point-value popup
+
+`EXPLOD`'s `:ExplDone` ($2711-$271f) shows that once the spider's own
+kill flash finishes, its motion-object slot gets reused to display the
+exact point value earned (300/600/900, from the same distance tiers
+`CalcSpdrPts` uses for scoring) at the kill location -- a classic arcade
+"floating score" convention this game had entirely missing, for any
+entity. Added `Game.spiderPointsPopup`, spawned on spider kill with a
+short delay (matching the kill-flash duration, so it appears as the
+flash clears rather than overlapping it) and a ~1s display window (the
+real hold time -- up to the spider's own ~4s respawn gap -- wasn't
+tuned down for a modern display; 1s is a deliberate, undocumented
+choice, not a verified value). Scoped to the spider only, matching the
+source (centipede/flea/scorpion have fixed, well-known point values with
+no documented equivalent display). Verified directly: text and score
+match ("900" for a close kill), popup appears after the flash delay and
+clears after its own duration.
+
 ## Explicitly approximated (flagged, not verified anywhere)
 
 - Named RGB hex values for each DBGR color (the source names colors, e.g.

@@ -103,6 +103,7 @@ export class Renderer {
     if (game.scorpion) this.drawScorpion(game.scorpion);
     if (game.shot) this.drawShot(game.shot);
     for (const flash of game.killFlashes) this.drawKillFlash(flash);
+    if (game.spiderPointsPopup && game.spiderPointsPopup.delay <= 0) this.drawSpiderPointsPopup(game.spiderPointsPopup);
     if (game.state === 'PLAYING' || game.state === 'ATTRACT' || game.state === 'HIGH_SCORE_ENTRY') {
       this.drawShooter(game.shooter, palette.legs);
     }
@@ -239,6 +240,14 @@ export class Renderer {
   // second on real hardware anyway.
   private drawKillFlash(flash: { row: number; col: number }): void {
     this.rect(this.px(flash.col), this.py(flash.row), CELL, CELL, COLORS.tallyFlash);
+  }
+
+  // VERIFIED (EXPLOD's :ExplDone, $2711-$271f): once the spider's own kill
+  // flash finishes, its motion-object slot is reused to display the exact
+  // point value earned (300/600/900) at the kill location.
+  private drawSpiderPointsPopup(popup: { row: number; col: number; text: string }): void {
+    const { cx, cy } = this.center(popup.col, popup.row);
+    this.centeredText(popup.text, cx, cy - 3, '#ffffff');
   }
 
   private drawCentipede(game: Game, palette: { body: string; legs: string; eyes: string }): void {
