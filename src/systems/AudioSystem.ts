@@ -2,16 +2,43 @@ import { AUDIO } from '../config';
 import type { Game, GameEvent } from '../Game';
 
 /**
- * All sound is synthesized with the Web Audio API — no sample assets to
- * ship, and every effect is cheap to retune (frequency/duration constants
- * are all local to this file).
+ * Sound is organized around the four POKEY channels the original hardware
+ * used, per the reference pack's disassembly-derived channel mapping:
+ *   CH1 - explosions (player death)
+ *   CH2 - bonus-life chime, centipede, scorpion
+ *   CH3 - shot / mushroom impact
+ *   CH4 - spider
+ * That channel assignment is transcribed from the reference pack, not
+ * something this session independently confirmed against the disassembly
+ * text — flea has no documented channel, so it's grouped with CH4 here as
+ * a labeled approximation.
+ *
+ * All sound is synthesized live via Web Audio — there are no original
+ * Atari WAV samples in this repo (see IMPLEMENTATION_NOTES.md). If real,
+ * legally-obtained samples are dropped into `public/assets/audio/original/`
+ * under the names in `SAMPLE_MANIFEST` below, they're used automatically;
+ * otherwise this falls back to the synthesized placeholder for that role.
  */
+
+const SAMPLE_MANIFEST: Record<string, string> = {
+  explosion: 'assets/audio/original/explosion.wav', // CH1
+  extraLife: 'assets/audio/original/bonus_life.wav', // CH2
+  centipede: 'assets/audio/original/centipede.wav', // CH2
+  scorpion: 'assets/audio/original/scorpion.wav', // CH2
+  shot: 'assets/audio/original/shot.wav', // CH3
+  mushroom: 'assets/audio/original/mushroom.wav', // CH3
+  spider: 'assets/audio/original/spider.wav', // CH4
+  flea: 'assets/audio/original/flea.wav', // CH4 (approximated — unverified role)
+};
+
 export class AudioSystem {
   private ctx: AudioContext | null = null;
   private master: GainNode | null = null;
   private heartbeatTimer = 0;
   private heartbeatHigh = false;
   private muted = false;
+  private samples = new Map<string, AudioBuffer>();
+  private samplesRequested = false;
 
   private ensureContext(): void {
     if (this.ctx) return;
@@ -26,6 +53,32 @@ export class AudioSystem {
   unlock(): void {
     this.ensureContext();
     this.ctx?.resume();
+    this.loadOptionalSamples();
+  }
+
+  /** Best-effort: pulls in real samples if the project owner has supplied them; silently no-ops otherwise. */
+  private loadOptionalSamples(): void {
+    if (this.samplesRequested || !this.ctx) return;
+    this.samplesRequested = true;
+    for (const [key, url] of Object.entries(SAMPLE_MANIFEST)) {
+      fetch(url)
+        .then((res) => (res.ok ? res.arrayBuffer() : Promise.reject()))
+        .then((buf) => this.ctx!.decodeAudioData(buf))
+        .then((decoded) => this.samples.set(key, decoded))
+        .catch(() => {
+          /* no sample supplied for this role — synthesized fallback stays in effect */
+        });
+    }
+  }
+
+  private playSample(key: string): boolean {
+    const buf = this.samples.get(key);
+    if (!buf || !this.ctx || !this.master) return false;
+    const src = this.ctx.createBufferSource();
+    src.buffer = buf;
+    src.connect(this.master);
+    src.start();
+    return true;
   }
 
   setMuted(muted: boolean): void {
@@ -35,6 +88,8 @@ export class AudioSystem {
 
   update(dt: number, game: Game): void {
     if (!this.ctx || this.muted) return;
+    // CH2 (centipede): a persistent "heartbeat" thump for as long as any
+    // segment is alive on screen, speeding up as the wave thins out.
     const segs = game.centipede.totalSegments;
     if (segs > 0 && game.state === 'PLAYING') {
       this.heartbeatTimer -= dt;
@@ -42,7 +97,9 @@ export class AudioSystem {
         const speedFactor = Math.min(1, segs / 12);
         this.heartbeatTimer = 0.42 - speedFactor * 0.18;
         this.heartbeatHigh = !this.heartbeatHigh;
-        this.blip({ freq: this.heartbeatHigh ? 90 : 70, dur: 0.07, type: 'square', gain: 0.25 });
+        if (!this.playSample('centipede')) {
+          this.blip({ freq: this.heartbeatHigh ? 90 : 70, dur: 0.07, type: 'square', gain: 0.25 });
+        }
       }
     }
   }
@@ -51,42 +108,49 @@ export class AudioSystem {
     if (!this.ctx || this.muted) return;
     for (const e of events) {
       switch (e.type) {
+        // CH3 - shot / mushroom impact
         case 'fire':
-          this.blip({ freq: 900, dur: 0.05, type: 'square', gain: 0.15, slideTo: 1400 });
+          if (!this.playSample('shot')) this.blip({ freq: 900, dur: 0.05, type: 'square', gain: 0.15, slideTo: 1400 });
           break;
         case 'mushroomDamaged':
-          this.blip({ freq: 300, dur: 0.04, type: 'square', gain: 0.2 });
+          if (!this.playSample('mushroom')) this.blip({ freq: 300, dur: 0.04, type: 'square', gain: 0.2 });
           break;
         case 'mushroomDestroyed':
-          this.blip({ freq: 220, dur: 0.08, type: 'square', gain: 0.25, slideTo: 90 });
-          break;
-        case 'centipedeBodyHit':
-          this.blip({ freq: 500, dur: 0.06, type: 'sawtooth', gain: 0.22, slideTo: 200 });
-          break;
-        case 'centipedeHeadHit':
-          this.blip({ freq: 650, dur: 0.09, type: 'sawtooth', gain: 0.28, slideTo: 150 });
-          break;
-        case 'spiderSpawn':
-        case 'spiderHit':
-          this.chime();
-          break;
-        case 'fleaSpawn':
-          this.whistle();
-          break;
-        case 'scorpionHit':
-          this.blip({ freq: 700, dur: 0.12, type: 'square', gain: 0.3, slideTo: 100 });
-          break;
-        case 'playerDeath':
-          this.explosion();
-          break;
-        case 'extraLife':
-          this.fanfare();
+          if (!this.playSample('mushroom')) this.blip({ freq: 220, dur: 0.08, type: 'square', gain: 0.25, slideTo: 90 });
           break;
         case 'sideFeedTrigger':
           this.blip({ freq: 1200, dur: 0.2, type: 'sawtooth', gain: 0.3, slideTo: 400 });
           break;
         case 'mushroomTallyTick':
           this.blip({ freq: 1000, dur: 0.02, type: 'square', gain: 0.15 });
+          break;
+
+        // CH2 - bonus life, centipede, scorpion
+        case 'centipedeBodyHit':
+          if (!this.playSample('centipede')) this.blip({ freq: 500, dur: 0.06, type: 'sawtooth', gain: 0.22, slideTo: 200 });
+          break;
+        case 'centipedeHeadHit':
+          if (!this.playSample('centipede')) this.blip({ freq: 650, dur: 0.09, type: 'sawtooth', gain: 0.28, slideTo: 150 });
+          break;
+        case 'scorpionHit':
+          if (!this.playSample('scorpion')) this.blip({ freq: 700, dur: 0.12, type: 'square', gain: 0.3, slideTo: 100 });
+          break;
+        case 'extraLife':
+          if (!this.playSample('extraLife')) this.fanfare();
+          break;
+
+        // CH4 - spider (flea grouped here as an approximation; unverified)
+        case 'spiderSpawn':
+        case 'spiderHit':
+          if (!this.playSample('spider')) this.chime();
+          break;
+        case 'fleaSpawn':
+          if (!this.playSample('flea')) this.whistle();
+          break;
+
+        // CH1 - explosions
+        case 'playerDeath':
+          if (!this.playSample('explosion')) this.explosion();
           break;
       }
     }

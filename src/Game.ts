@@ -372,7 +372,7 @@ export class Game {
 
     this.fleaAllowedTimer -= dt;
     if (this.fleaAllowedTimer <= 0) {
-      this.flea = new Flea(this.rng.int(1, GRID.COLS), this.rng);
+      this.flea = new Flea(this.rng.int(1, GRID.COLS), this.rng, this.score);
       this.emit('fleaSpawn');
     }
   }

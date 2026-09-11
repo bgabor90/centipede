@@ -3,34 +3,36 @@ import type { Game } from '../Game';
 import type { SegmentView } from '../entities/Centipede';
 import type { FeatureFlags } from '../config';
 import { drawBitmapText, measureText } from './BitmapFont';
+import { getWavePalette } from './Palette';
 
+// Verified screen/tile geometry (6502disassembly.com/va-centipede/graphics.html):
+// "Resolution: 240x256 pixels", "30x32 grid of 8x8 pixel tiles", gameplay
+// area 30x30 with row 31 (top) holding the score display and row 0
+// (bottom) unused during gameplay. CELL/CANVAS_W/CANVAS_H below reproduce
+// that exactly: one 8px tile-row for score, 30 tile-rows of gameplay, one
+// 8px tile-row left blank during play (used for a disclaimer in attract
+// mode, since reproducing Atari's own copyright string isn't appropriate
+// for a fan project).
 export const CELL = 8;
-export const HEADER_H = 24;
-export const FOOTER_H = 18;
-export const CANVAS_W = GRID.COLS * CELL;
-export const CANVAS_H = HEADER_H + GRID.ROWS * CELL + FOOTER_H;
+export const HEADER_H = CELL;
+export const FOOTER_H = CELL;
+export const CANVAS_W = GRID.COLS * CELL; // 240
+export const CANVAS_H = HEADER_H + GRID.ROWS * CELL + FOOTER_H; // 256
 
 const COLORS = {
   bg: '#000000',
-  headerText: '#ffffff',
-  scoreP1: '#ffffff',
+  scoreText: '#ffffff',
   hiScore: '#3ad6ff',
   stem: '#e8e8d8',
-  cap: ['#ff5a3c', '#ff9d2e', '#e84fa0', '#5ad1e6'],
   capPoison: '#a64bff',
-  head: '#ffe23c',
-  headEye: '#c81e3c',
-  bodyA: '#3cff6e',
-  bodyB: '#2ec7ff',
   poisonedSeg: '#a64bff',
   spiderBody: '#33d0ff',
   spiderLeg: '#ff6ec8',
   flea: '#ff3c6e',
   scorpion: '#ffb02e',
-  shooter: '#4be8ff',
   shot: '#ffffff',
-  lives: '#4be8ff',
   gridLine: 'rgba(255,255,255,0.08)',
+  disclaimer: '#3a3a3a',
 } as const;
 
 // 8x8 pristine mushroom mask; damage removes cells in `biteOrder`.
@@ -89,20 +91,22 @@ export class Renderer {
   render(game: Game, features: FeatureFlags): void {
     this.frame++;
     const ctx = this.ctx;
+    const palette = getWavePalette(game.waveNumber);
+
     ctx.fillStyle = COLORS.bg;
     ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
 
-    this.drawHeader(game);
+    this.drawHeader(game, palette.eyes);
     this.drawPlayfieldBorder();
     if (features.showGrid) this.drawGrid();
 
-    this.drawMushrooms(game);
-    this.drawCentipede(game);
+    this.drawMushrooms(game, palette.body);
+    this.drawCentipede(game, palette);
     if (game.spider) this.drawSpider(game.spider);
     if (game.flea) this.drawFlea(game.flea);
     if (game.scorpion) this.drawScorpion(game.scorpion);
     if (game.shot) this.drawShot(game.shot);
-    if (game.state === 'PLAYING') this.drawShooter(game.shooter);
+    if (game.state === 'PLAYING') this.drawShooter(game.shooter, palette.legs);
 
     this.drawFooter(game);
 
@@ -138,20 +142,29 @@ export class Renderer {
   }
 
   // -- header / footer ------------------------------------------------------
-  private drawHeader(game: Game): void {
-    this.text('1UP', 4, 2, COLORS.scoreP1);
-    this.text(pad(game.score, 6), 4, 11, COLORS.scoreP1);
-    this.centeredText('HIGH SCORE', CANVAS_W / 2, 2, COLORS.hiScore);
-    this.centeredText(pad(game.highScore, 6), CANVAS_W / 2, 11, COLORS.scoreP1);
+  // Real hardware fits the whole HUD into a single 8px tile-row (row 31),
+  // so P1 score, HIGH SCORE, and the lives readout are laid out side by
+  // side on one line rather than stacked — width is plentiful (30 tile
+  // columns), height is not.
+  private drawHeader(game: Game, textColor: string): void {
+    this.text('1UP', 2, 1, textColor);
+    this.text(pad(game.score, 6), 24, 1, textColor);
+    this.centeredText('HIGH SCORE', CANVAS_W / 2, 1, COLORS.hiScore);
+    const hiVal = pad(game.highScore, 6);
+    this.text(hiVal, CANVAS_W / 2 + 45, 1, textColor);
+
+    const lives = Math.max(0, game.lives - 1);
+    for (let i = 0; i < lives; i++) {
+      this.drawDiamond(CANVAS_W - 6 - i * 8, 4, 2, textColor);
+    }
   }
 
+  // Row 0 (bottom) is documented as unused during gameplay — left blank
+  // here to match, with a small disclaimer only shown outside play.
   private drawFooter(game: Game): void {
-    const y = CANVAS_H - FOOTER_H + 5;
-    for (let i = 0; i < Math.max(0, game.lives - 1); i++) {
-      this.drawDiamond(6 + i * 10, y + 3, 3, COLORS.lives);
+    if (game.state === 'ATTRACT' || game.state === 'GAME_OVER') {
+      this.centeredText('FAN-MADE - NOT AN ATARI PRODUCT', CANVAS_W / 2, CANVAS_H - 7, COLORS.disclaimer);
     }
-    const label = `WAVE ${game.waveNumber}`;
-    this.text(label, CANVAS_W - measureText(label) - 4, y, COLORS.headerText);
   }
 
   private drawPlayfieldBorder(): void {
@@ -187,13 +200,11 @@ export class Renderer {
   }
 
   // -- entities -------------------------------------------------------------
-  private drawMushrooms(game: Game): void {
+  private drawMushrooms(game: Game, bodyColor: string): void {
     game.mushrooms.forEach((row, col, cell) => {
       const x = this.px(col);
       const y = this.py(row);
-      const capColor = cell.poisoned
-        ? COLORS.capPoison
-        : COLORS.cap[(row + col) % COLORS.cap.length];
+      const capColor = cell.poisoned ? COLORS.capPoison : bodyColor;
       const removed = new Set(BITE_ORDER.slice(0, cell.hits * 4).map(([r, c]) => `${r},${c}`));
       for (let r = 0; r < 8; r++) {
         for (let c = 0; c < 8; c++) {
@@ -206,27 +217,28 @@ export class Renderer {
     });
   }
 
-  private drawCentipede(game: Game): void {
+  private drawCentipede(game: Game, palette: { body: string; legs: string; eyes: string }): void {
     const views = game.centipede.getAllSegmentViews();
-    for (const v of views) this.drawSegment(v, game.waveNumber);
+    for (const v of views) this.drawSegment(v, palette);
   }
 
-  private drawSegment(v: SegmentView, waveNumber: number): void {
+  // The original reuses one sprite per row via a horizontal-flip flag
+  // rather than drawing separate left/right art; `dir` mirrors the
+  // leg/eye offsets the same way here.
+  private drawSegment(v: SegmentView, palette: { body: string; legs: string; eyes: string }): void {
     const { cx, cy } = this.center(v.col, v.row);
-    const bodyPalette = [COLORS.bodyA, COLORS.bodyB];
-    const bodyColor = v.poisoned ? COLORS.poisonedSeg : bodyPalette[(v.index + waveNumber) % 2];
-    const mainColor = v.isHead ? COLORS.head : bodyColor;
+    const bodyColor = v.poisoned ? COLORS.poisonedSeg : palette.body;
+    const flip = v.dir >= 0 ? 1 : -1;
 
-    this.roundedBlock(cx - 3, cy - 3, 7, 7, mainColor);
+    this.roundedBlock(cx - 3, cy - 3, 7, 7, bodyColor);
 
-    // little legs, alternating side based on frame parity for a walk-cycle feel
     const legPhase = (this.frame >> 3) % 2 === 0;
-    this.rect(cx - 4, cy + (legPhase ? -2 : 1), 1, 2, bodyColor);
-    this.rect(cx + 3, cy + (legPhase ? 1 : -2), 1, 2, bodyColor);
+    this.rect(cx - 4 * flip, cy + (legPhase ? -2 : 1), 1, 2, palette.legs);
+    this.rect(cx + 3 * flip, cy + (legPhase ? 1 : -2), 1, 2, palette.legs);
 
     if (v.isHead) {
-      this.rect(cx - 2, cy - 1, 1, 1, COLORS.headEye);
-      this.rect(cx + 1, cy - 1, 1, 1, COLORS.headEye);
+      this.rect(cx - 2 * flip, cy - 1, 1, 1, palette.eyes);
+      this.rect(cx + 1 * flip, cy - 1, 1, 1, palette.eyes);
     }
   }
 
@@ -260,9 +272,9 @@ export class Renderer {
     this.rect(cx, cy - 3, 1, 6, COLORS.shot);
   }
 
-  private drawShooter(shooter: Game['shooter']): void {
+  private drawShooter(shooter: Game['shooter'], color: string): void {
     const { cx, cy } = this.center(shooter.x, shooter.y);
-    this.drawDiamond(cx, cy, 3, COLORS.shooter);
+    this.drawDiamond(cx, cy, 3, color);
   }
 
   private drawCrtOverlay(): void {
@@ -284,7 +296,7 @@ export class Renderer {
   }
 
   private drawAttract(): void {
-    this.centeredText('CENTIPEDE', CANVAS_W / 2, 64, COLORS.head, 2);
+    this.centeredText('CENTIPEDE', CANVAS_W / 2, 64, '#ffe23c', 2);
     this.centeredText('CLICK OR PRESS FIRE', CANVAS_W / 2, 104, '#fff');
     this.centeredText('TO START', CANVAS_W / 2, 113, '#fff');
     this.centeredText('MOUSE = TRAK-BALL', CANVAS_W / 2, 132, COLORS.spiderBody);

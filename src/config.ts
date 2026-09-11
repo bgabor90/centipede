@@ -69,6 +69,11 @@ export const WAVE_CYCLE = {
 } as const;
 
 export const CENTIPEDE_SPEED = {
+  // APPROXIMATED: the disassembly confirms two discrete speed values
+  // (`plyr_cent_spd` = 1 or 2) exist but the fetched excerpt didn't give
+  // pixels-per-frame numbers, so these are tuned to feel right against the
+  // Video Master's Guide's qualitative "fast wave / slow wave" descriptions
+  // rather than transcribed from a verified source value.
   // Cells per second, along a row. Poisoned links move at the FAST rate
   // regardless of the wave's nominal speed (they're rushing to the bottom).
   SLOW: 4.2,
@@ -77,8 +82,16 @@ export const CENTIPEDE_SPEED = {
 } as const;
 
 export const FLEA = {
-  DROP_SPEED_FAST: 10,
-  DROP_SPEED_VERY_FAST: 16,
+  // VERIFIED (6502disassembly.com Centipede_rev4.html): base fall speed is
+  // 2 px/frame below 60,000 points, 3 px/frame at/above it (60fps, 8px/cell
+  // -> 15 and 22.5 cells/sec). The Video Master's Guide separately documents
+  // a same-flight "fast -> very fast, never back" escalation once a flea is
+  // hit once; HIT_SPEED_MULTIPLIER (not from either source verbatim) applies
+  // that escalation on top of whichever base tier is active.
+  FALL_SPEED_SCORE_THRESHOLD: 60_000,
+  FALL_SPEED_BASE_LOW: 15,
+  FALL_SPEED_BASE_HIGH: 22.5,
+  HIT_SPEED_MULTIPLIER: 1.4,
   SHOTS_TO_KILL: 2,
   MIN_INFIELD_MUSHROOMS_BY_SCORE: [
     { upTo: 20_000, count: 5 },
@@ -94,8 +107,10 @@ export const FLEA = {
     { upTo: 300_000, count: 23 },
   ] as const,
   MUSHROOMS_NEEDED_INCREMENT_SCORE_STEP: 20_000, // beyond 300,000: +1 per 20,000
-  PLANT_MIN: 2,
-  PLANT_MAX: 6,
+  // VERIFIED (6502disassembly.com): mushroom planting is a per-row-passed
+  // probability roll ("AND #$03" against the low 2 bits -> 1-in-4 chance),
+  // not a pre-planned count for the whole descent as earlier assumed.
+  PLANT_CHANCE_PER_ROW: 0.25,
   RELEASE_DELAY_AFTER_ESCAPE_MS: [600, 1400] as [number, number],
 } as const;
 

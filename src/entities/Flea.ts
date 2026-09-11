@@ -8,31 +8,25 @@ export class Flea {
   speed: number;
   hits = 0;
   alive = true;
-  private plantRows: Set<number>;
-  private plantedSoFar = new Set<number>();
+  private hitEscalated = false;
+  private rng: Random;
   private lastWholeRow: number;
 
-  constructor(col: number, rng: Random) {
+  constructor(col: number, rng: Random, score: number) {
     this.col = col;
     this.y = GRID.ROWS + 0.9;
-    this.speed = FLEA.DROP_SPEED_FAST;
+    this.rng = rng;
     this.lastWholeRow = GRID.ROWS + 1;
-
-    const plantCount = rng.int(FLEA.PLANT_MIN, FLEA.PLANT_MAX);
-    const candidateRows: number[] = [];
-    for (let r = 2; r <= GRID.ROWS; r++) candidateRows.push(r);
-    // Fisher-Yates partial shuffle to pick `plantCount` unique rows.
-    for (let i = candidateRows.length - 1; i > 0 && candidateRows.length - i <= plantCount; i--) {
-      const j = rng.int(0, i);
-      [candidateRows[i], candidateRows[j]] = [candidateRows[j], candidateRows[i]];
-    }
-    this.plantRows = new Set(candidateRows.slice(-plantCount));
+    this.speed = score >= FLEA.FALL_SPEED_SCORE_THRESHOLD ? FLEA.FALL_SPEED_BASE_HIGH : FLEA.FALL_SPEED_BASE_LOW;
   }
 
-  /** Call once when hit; escalates speed and tracks the 2-shot kill. */
+  /** Call once when hit; escalates speed (fast -> very fast, never back) and tracks the 2-shot kill. */
   registerHit(): boolean {
     this.hits++;
-    this.speed = FLEA.DROP_SPEED_VERY_FAST; // fast -> very fast on first hit; never reverses
+    if (!this.hitEscalated) {
+      this.hitEscalated = true;
+      this.speed *= FLEA.HIT_SPEED_MULTIPLIER;
+    }
     if (this.hits >= FLEA.SHOTS_TO_KILL) {
       this.alive = false;
       return true; // killed
@@ -44,10 +38,9 @@ export class Flea {
     this.y -= this.speed * dt;
     const wholeRow = Math.ceil(this.y);
     for (let r = this.lastWholeRow - 1; r >= wholeRow; r--) {
-      if (r < 2 || r > GRID.ROWS) continue;
-      if (this.plantRows.has(r) && !this.plantedSoFar.has(r) && !mushrooms.has(r, this.col)) {
+      if (r < ZONES.MUSHROOM_MIN_ROW || r > GRID.ROWS) continue;
+      if (!mushrooms.has(r, this.col) && this.rng.chance(FLEA.PLANT_CHANCE_PER_ROW)) {
         mushrooms.plant(r, this.col);
-        this.plantedSoFar.add(r);
       }
     }
     this.lastWholeRow = wholeRow;
