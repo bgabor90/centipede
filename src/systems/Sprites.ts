@@ -590,6 +590,77 @@ export const PLAYER_DEATH_EXPLOSION_FRAMES: Mask[] = [
   ],
 ];
 
+/**
+ * Scorpion kill explosion, sampled from the six-frame dissolving-burst row
+ * in the local reference sheet (immediately after the flea's four frames,
+ * same row). A solid green-and-red blob hollows out and scatters outward
+ * into speckled debris over six frames -- distinct from the player's own
+ * shrinking-flower explosion above. `F` is the green fill, `D` the red
+ * accents, `H` the cream highlight.
+ */
+export const SCORPION_EXPLOSION_FRAMES: Mask[] = [
+  [
+    '......DD.D......',
+    '.....HFDF.......',
+    '.....FFFFFD.....',
+    '....DFFFFFH.....',
+    '....DFF.FFF.....',
+    '....HFFFFFHF....',
+    '.....HFFDFH.....',
+    '.....DHD.D.F....',
+  ],
+  [
+    '......FDF.D.....',
+    '.....FFFFFDF....',
+    '....HFFFFFFH....',
+    '....HFFHHFFF....',
+    '....HFFHHFFH....',
+    '....HFFFFFFF....',
+    '....HFFDFFFH....',
+    '.....F.D.F......',
+  ],
+  [
+    '.....FHFDF......',
+    '....F.FFFFFD....',
+    '....FFFHFHF.....',
+    '....DFH..FFF....',
+    '....FF...F......',
+    '....FDDFDFFF....',
+    '....DFFFFFF.....',
+    '.....HF..F.H....',
+  ],
+  [
+    '....F.FH.D.F....',
+    '.....H.FF.F.....',
+    '....DF.D.H.D....',
+    '....F.D...F.....',
+    '....FF.....H....',
+    '.....D.D.DFH....',
+    '....H.D.D.FD....',
+    '....DF.FFFH.....',
+  ],
+  [
+    '.....F..F.F.....',
+    '.....DHF.DF.....',
+    '....FH..F..H....',
+    '.....D....D.....',
+    '....F.D..D.D....',
+    '.....H.F.FH.....',
+    '....DFD...F.....',
+    '.....F.FHD......',
+  ],
+  [
+    '.....H.F..F.....',
+    '....D.F.HD.D....',
+    '................',
+    '....F.....F.....',
+    '.....H.....F....',
+    '.....H....H.....',
+    '....D.F....F....',
+    '.....H.HD.D.....',
+  ],
+];
+
 export const MASK_W = 16;
 export const MASK_H = 8;
 

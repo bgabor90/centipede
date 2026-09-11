@@ -82,7 +82,7 @@ const TALLY_TICK_SECONDS = 8 / 60;
 // VERIFIED (UpdateExplosions, $2701-$2744): a killed enemy's picture
 // counts down one step per frame from $ff to $f9 (6 steps) before the
 // slot clears -- a brief flash rather than an instant disappearance.
-const KILL_FLASH_SECONDS = 6 / 60;
+export const KILL_FLASH_SECONDS = 6 / 60;
 // VERIFIED (:NotAttract sets frame_ctr=1 at $2489; AttractMove erases
 // "GAME OVER" when frame_ctr wraps back to 0 at $2133-$2139): the message
 // stays up for 255 frames (256 - 1) before the demo erases it -- not the
@@ -154,7 +154,7 @@ export class Game {
   // spider/flea/scorpion's picture counts down from $ff to $f9 one step
   // per frame (no extra gating) before the slot is finally cleared -- a
   // brief ~6-frame (~0.1s) flash, not the instant disappearance we had.
-  killFlashes: Array<{ row: number; col: number; timer: number }> = [];
+  killFlashes: Array<{ row: number; col: number; timer: number; kind: 'default' | 'scorpion' }> = [];
   // VERIFIED (EXPLOD's :ExplDone, $2711-$271f): once the spider's own kill
   // flash finishes, its motion-object slot is reused to display the exact
   // point value earned (300/900/600, per the distance tiers computed in
@@ -546,7 +546,7 @@ export class Game {
       if (this.scorpion && this.scorpion.row === r && Math.abs(this.scorpion.x - col) < 10 / 8) {
         this.addScore(SCORING.SCORPION);
         this.emit('scorpionHit', SCORING.SCORPION);
-        this.spawnKillFlash(this.scorpion.row, this.scorpion.col);
+        this.spawnKillFlash(this.scorpion.row, this.scorpion.col, 'scorpion');
         this.scorpion = null;
         this.shot = null;
         return;
@@ -581,8 +581,8 @@ export class Game {
     }
   }
 
-  private spawnKillFlash(row: number, col: number): void {
-    this.killFlashes.push({ row, col, timer: KILL_FLASH_SECONDS });
+  private spawnKillFlash(row: number, col: number, kind: 'default' | 'scorpion' = 'default'): void {
+    this.killFlashes.push({ row, col, timer: KILL_FLASH_SECONDS, kind });
   }
 
   private updateKillFlashes(dt: number): void {

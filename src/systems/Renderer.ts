@@ -1,5 +1,5 @@
 import { GRID } from '../config';
-import type { Game } from '../Game';
+import { KILL_FLASH_SECONDS, type Game } from '../Game';
 import type { SegmentView } from '../entities/Centipede';
 import type { FeatureFlags } from '../config';
 import { GLYPH_W, drawBitmapText, measureText } from './BitmapFont';
@@ -11,6 +11,7 @@ import {
   MUSHROOM_STAGES,
   POISONED_MUSHROOM_STAGES,
   SCORPION_FRAMES,
+  SCORPION_EXPLOSION_FRAMES,
   SHOOTER_MASK,
   SPIDER_FRAMES,
   PLAYER_DEATH_EXPLOSION_FRAMES,
@@ -247,10 +248,23 @@ export class Renderer {
   // VERIFIED (UpdateExplosions, $2701-$2744): a killed centipede segment/
   // spider/flea/scorpion doesn't just vanish -- its picture counts down
   // through a handful of frames before the slot clears. A brief solid
-  // flash at the kill cell reproduces that pop without needing new sprite
-  // art for a multi-frame animation that lasts well under a fifth of a
-  // second on real hardware anyway.
-  private drawKillFlash(flash: { row: number; col: number }): void {
+  // flash at the kill cell reproduces that pop for segments/spider/flea,
+  // which don't have dedicated multi-frame kill art here; the scorpion
+  // does (SCORPION_EXPLOSION_FRAMES, traced from the reference sheet), so
+  // it gets the real dissolving-burst animation instead.
+  private drawKillFlash(flash: { row: number; col: number; timer: number; kind: 'default' | 'scorpion' }): void {
+    if (flash.kind === 'scorpion') {
+      const { cx, cy } = this.center(flash.col, flash.row);
+      const elapsed = 1 - Math.max(0, Math.min(1, flash.timer / KILL_FLASH_SECONDS));
+      const frames = SCORPION_EXPLOSION_FRAMES;
+      const frameIndex = Math.min(frames.length - 1, Math.floor(elapsed * frames.length));
+      renderMask(this.putPixel, frames[frameIndex], cx, cy, {
+        F: COLORS.explosionSpark,
+        D: COLORS.explosionCore,
+        H: COLORS.explosionHighlight,
+      });
+      return;
+    }
     this.rect(this.px(flash.col), this.py(flash.row), CELL, CELL, COLORS.tallyFlash);
   }
 
