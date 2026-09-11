@@ -84,7 +84,7 @@ function step(dt: number): void {
   const inputState = input.computeInput(game.shooter.x, game.shooter.y);
   game.update(dt, inputState);
   audio.update(dt, game);
-  audio.handle(game.drainEvents());
+  audio.handle(game.drainEvents(), game.state);
 }
 
 requestAnimationFrame(frame);

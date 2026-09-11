@@ -1,17 +1,19 @@
 import { AUDIO } from '../config';
 import type { Game, GameEvent } from '../Game';
+import type { GameStateName } from '../types';
 
 /**
  * Sound is organized around the four POKEY channels the original hardware
- * used, per the reference pack's disassembly-derived channel mapping:
+ * used. VERIFIED (UpdateSound's header comment, $3079): "1: all
+ * explosions / 2: bonus, centipede, flea/scorpion sounds / 3: shot sound
+ * / 4: spider sound" -- read directly from the raw disassembly listing,
+ * correcting an earlier, reference-pack-transcribed guess that grouped
+ * flea with the spider's channel (CH4) instead of its actual channel
+ * (CH2, alongside bonus/centipede/scorpion):
  *   CH1 - explosions (player death)
- *   CH2 - bonus-life chime, centipede, scorpion
+ *   CH2 - bonus-life chime, centipede, scorpion, flea
  *   CH3 - shot / mushroom impact
  *   CH4 - spider
- * That channel assignment is transcribed from the reference pack, not
- * something this session independently confirmed against the disassembly
- * text — flea has no documented channel, so it's grouped with CH4 here as
- * a labeled approximation.
  *
  * All sound is synthesized live via Web Audio — there are no original
  * Atari WAV samples in this repo (see IMPLEMENTATION_NOTES.md). If real,
@@ -25,10 +27,10 @@ const SAMPLE_MANIFEST: Record<string, string> = {
   extraLife: 'assets/audio/original/bonus_life.wav', // CH2
   centipede: 'assets/audio/original/centipede.wav', // CH2
   scorpion: 'assets/audio/original/scorpion.wav', // CH2
+  flea: 'assets/audio/original/flea.wav', // CH2
   shot: 'assets/audio/original/shot.wav', // CH3
   mushroom: 'assets/audio/original/mushroom.wav', // CH3
   spider: 'assets/audio/original/spider.wav', // CH4
-  flea: 'assets/audio/original/flea.wav', // CH4 (approximated — unverified role)
 };
 
 export class AudioSystem {
@@ -104,8 +106,15 @@ export class AudioSystem {
     }
   }
 
-  handle(events: GameEvent[]): void {
-    if (!this.ctx || this.muted) return;
+  // VERIFIED (UpdateSound, $3079-$308b): `ldx attract_mode; bpl :Playing`
+  // -- when attract_mode is set, execution falls through to zeroing all
+  // four POKEY channels and returning immediately, every single frame.
+  // The real cabinet is completely silent during the attract demo; sound
+  // only plays during real gameplay. Attract-mode events (fire,
+  // centipedeBodyHit, spiderHit, playerDeath, etc. -- the demo runs the
+  // real simulation) were previously played through like any other game.
+  handle(events: GameEvent[], state: GameStateName): void {
+    if (!this.ctx || this.muted || state === 'ATTRACT') return;
     for (const e of events) {
       switch (e.type) {
         // CH3 - shot / mushroom impact
@@ -125,7 +134,7 @@ export class AudioSystem {
           this.blip({ freq: 1000, dur: 0.02, type: 'square', gain: 0.15 });
           break;
 
-        // CH2 - bonus life, centipede, scorpion
+        // CH2 - bonus life, centipede, scorpion, flea
         case 'centipedeBodyHit':
           if (!this.playSample('centipede')) this.blip({ freq: 500, dur: 0.06, type: 'sawtooth', gain: 0.22, slideTo: 200 });
           break;
@@ -138,14 +147,14 @@ export class AudioSystem {
         case 'extraLife':
           if (!this.playSample('extraLife')) this.fanfare();
           break;
+        case 'fleaSpawn':
+          if (!this.playSample('flea')) this.whistle();
+          break;
 
-        // CH4 - spider (flea grouped here as an approximation; unverified)
+        // CH4 - spider
         case 'spiderSpawn':
         case 'spiderHit':
           if (!this.playSample('spider')) this.chime();
-          break;
-        case 'fleaSpawn':
-          if (!this.playSample('flea')) this.whistle();
           break;
 
         // CH1 - explosions

@@ -239,12 +239,30 @@ Follow-up adjustments after user feedback on the resulting visuals:
   that screen row on the original hardware — **the game currently shows
   no disclaimer of any kind**, which is worth knowing if that mattered.
 
+## Attract mode is silent, and flea's real sound channel
+
+- **Attract mode is completely silent on real hardware**: `UpdateSound`
+  ($3079-$308b) checks `attract_mode` every frame and, when set, zeroes
+  all four POKEY channels and returns immediately -- sound only plays
+  during real gameplay. `AudioSystem.handle()` previously played every
+  event (fire, hits, spawns, death) regardless of state, so the
+  continuously-running attract demo was audibly identical to real play.
+  Fixed by passing the current `GameStateName` into `handle()` and
+  skipping entirely when it's `'ATTRACT'`. Verified directly: 0 sound
+  calls for a batch of events dispatched with state `'ATTRACT'`, normal
+  playback with state `'PLAYING'`.
+- **Flea's sound channel**: `UpdateSound`'s own header comment
+  ("1: all explosions / 2: bonus, centipede, flea/scorpion sounds /
+  3: shot sound / 4: spider sound") places flea on CH2 with bonus/
+  centipede/scorpion, not CH4 with the spider as a prior,
+  reference-pack-transcribed guess had it. Corrected the doc comment,
+  `SAMPLE_MANIFEST` labels, and event grouping in `AudioSystem.ts`
+  (synthesized playback itself is unaffected -- flea and spider already
+  used separate synth voices -- this only fixes the channel labeling and
+  which role a future real WAV sample should fill).
+
 ## Explicitly approximated (flagged, not verified anywhere)
 
-- POKEY channel-to-sound-effect mapping is transcribed from the reference
-  pack, not independently re-confirmed against the disassembly text by
-  this session; flea's channel isn't documented anywhere found, so it's
-  grouped with the spider channel as a labeled guess.
 - Named RGB hex values for each DBGR color (the source names colors, e.g.
   "orange", "reddish magenta" — the specific hex chosen to render each is
   this project's own reasonable interpretation, not a calibrated value).
