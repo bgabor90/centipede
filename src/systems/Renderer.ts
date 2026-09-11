@@ -381,11 +381,17 @@ export class Renderer {
 
   // Ports the always-on-screen attract text from ChkGameStart/
   // DrawBonusText/ShowScores: the high-score table, coin/credit line, and
-  // bonus-life reminder are all shown continuously, together, on top of
-  // the live demo -- never an exclusive splash/table screen that hides it
-  // (as this renderer used to cycle through), and never behind a dimming
-  // backdrop the real tile layer doesn't have.
+  // bonus-life reminder are shown continuously, together, over the live
+  // demo rather than cycling through exclusive splash/table screens. A
+  // dimming backdrop sits behind the text (not a real-hardware trait, but
+  // without it the busy live demo -- a full centipede, spider, mushroom
+  // field -- reads as illegible visual noise directly behind the score
+  // digits; readability wins here over literal tile-layer fidelity).
   private drawAttractOverlay(game: Game): void {
+    const ctx = this.ctx;
+    ctx.fillStyle = 'rgba(0,0,0,0.58)';
+    ctx.fillRect(34, 4, 172, 220);
+
     this.centeredText('HIGH SCORES', CANVAS_W / 2, 10, COLORS.attractText);
     game.highScores.forEach((entry, i) => {
       const rank = `${i + 1}`.padStart(2, ' ');
@@ -393,24 +399,10 @@ export class Renderer {
       this.centeredText(row, CANVAS_W / 2, 20 + i * 9, COLORS.attractText);
     });
 
-    this.drawAttractSpinner(CANVAS_W / 2, 100);
-
     this.centeredText('1 COIN 1 PLAY', CANVAS_W / 2, 176, COLORS.attractText);
     this.centeredText(`BONUS EVERY ${game.options.extraLifeScore}`, CANVAS_W / 2, 188, COLORS.attractText);
     this.centeredText('CLICK OR PRESS FIRE TO START', CANVAS_W / 2, 202, '#fff');
     this.centeredText('MOUSE / TOUCH = TRAK-BALL', CANVAS_W / 2, 212, '#fff');
-  }
-
-  private drawAttractSpinner(cx: number, cy: number): void {
-    const spokes = [
-      [0, -5], [4, -4], [5, 0], [4, 4],
-      [0, 5], [-4, 4], [-5, 0], [-4, -4],
-    ] as const;
-    const phase = (this.frame >> 3) % spokes.length;
-    for (let i = 0; i < 4; i++) {
-      const [dx, dy] = spokes[(phase + i) % spokes.length];
-      this.rect(cx + dx, cy + dy, i === 0 ? 2 : 1, i === 0 ? 2 : 1, '#ffffff');
-    }
   }
 
   private drawHighScoreEntry(game: Game): void {
