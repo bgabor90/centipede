@@ -587,6 +587,20 @@ CH2/CH4 during `LIFE_LOST_TALLY`/`PLAYER_DEATH_ANIMATION` -- states where
 the manual's spider/flea/scorpion-keep-running behavior, and so their
 sound too, should still apply).
 
+## Side-feed entry side is a fresh coin flip, not a strict alternation
+
+`CreateHead`'s `:InitSlot` ($2c1b-$2c29 in the Rev4 disassembly) picks
+which edge a new head enters from with a fresh `POKEY_RANDOM & 2` coin
+flip every single spawn, not a remembered left-right-left-right toggle --
+the ROM only ever sets a default (left) position/velocity and then a
+50% chance overwrites both to the right edge instead, with no memory of
+the previous pick. `updateSideFeed()` previously alternated strictly.
+Corrected to an independent 50/50 `this.rng.chance(0.5)` roll each spawn,
+so the same side can legitimately feed twice (or more) in a row, matching
+the source. (The interval-decay formula and floor this same routine
+governs were already correctly verified in an earlier pass -- see
+`SIDE_FEED` in `config.ts` -- this only touches the side selection.)
+
 ## Explicitly approximated (flagged, not verified anywhere)
 
 - Named RGB hex values for each DBGR color (the source names colors, e.g.

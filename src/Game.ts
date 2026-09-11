@@ -789,7 +789,12 @@ export class Game {
     }
     this.sideFeedTimer -= dt;
     if (this.sideFeedTimer <= 0) {
-      this.sideFeedSide = this.sideFeedSide === 'left' ? 'right' : 'left';
+      // VERIFIED (CreateHead's :InitSlot, $2c1b-$2c29 in the Rev4
+      // disassembly): the entry side is a fresh 50/50 POKEY_RANDOM coin
+      // flip every spawn (`and #2`, branching on the result), not a
+      // strict left-right-left-right alternation -- the same side can
+      // legitimately feed twice (or more) in a row.
+      this.sideFeedSide = this.rng.chance(0.5) ? 'left' : 'right';
       const col = this.sideFeedSide === 'left' ? 1 : GRID.COLS;
       const dir = this.sideFeedSide === 'left' ? 1 : -1;
       this.centipede.spawnChain(SIDE_FEED.ENTRY_ROW, col, dir as 1 | -1, 1, CENTIPEDE_SPEED.FAST, -1);
