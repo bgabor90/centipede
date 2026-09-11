@@ -170,6 +170,11 @@ Fetched and cross-checked this session (see citations in `config.ts` /
 - **Shot muzzle offset**: `InitPlayer` ($2936) positions the shot exactly
   4 raw units (0.5 cells) above the player's own position ("sticks out
   of gun"). We used 0.4 -- corrected to 0.5.
+- **Flea spawn column exclusion**: `InitFlea`'s ($20f4) random column
+  picker rejects raw values below 16 ("col 0 is offscreen; retry" plus
+  one more rejected value), excluding our columns 1-2 from flea spawns.
+  Also checked high-score qualification (8-entry table, strict `>`
+  comparison) against `UpdateHS` -- already an exact match.
 
 ## Behaviors kept from the Video Master's Guide (not overridden)
 

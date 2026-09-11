@@ -554,7 +554,10 @@ export class Game {
 
     this.fleaAllowedTimer -= dt;
     if (this.fleaAllowedTimer <= 0) {
-      this.flea = new Flea(this.rng.int(1, GRID.COLS), this.rng, this.score);
+      // VERIFIED (InitFlea, $20f4-$20fd): the ROM's column picker rejects
+      // raw values below 16 ("col 0 is offscreen; retry" plus one more
+      // rejected value), excluding our columns 1-2 from flea spawns.
+      this.flea = new Flea(this.rng.int(3, GRID.COLS), this.rng, this.score);
       this.emit('fleaSpawn');
     }
   }
