@@ -312,6 +312,16 @@ export class Game {
       case 'GAME_OVER':
         this.updateGameOver(dt);
         break;
+      case 'HIGH_SCORE_ENTRY':
+        // VERIFIED (:NotAttract, $245d-$2487): by the time GetInitials
+        // even runs, the real cabinet has already flipped attract_mode
+        // and re-initialized the spider/centipede/flea for a fresh
+        // attract-style demo -- initials entry is UI drawn on top of that
+        // already-running demo, not a frozen board. Reuses the same demo
+        // update as ATTRACT (which is also why the shooter is drawn
+        // during this state -- see Renderer.ts).
+        this.updateAttractDemo(dt);
+        break;
       default:
         break;
     }
@@ -1032,6 +1042,27 @@ export class Game {
     this.pendingInitialScore = this.score;
     this.initials = ['A', 'A', 'A'];
     this.initialIndex = 0;
+    // VERIFIED (:NotAttract, $245d-$2487): before GetInitials even runs,
+    // the cabinet re-initializes the spider/centipede/flea for a fresh
+    // demo-style run -- that's the backdrop that keeps playing behind the
+    // initials-entry UI, not whatever partial wave state the player died
+    // in. Mushrooms are left as-is (already fully restored by the tally),
+    // matching the real init sequence, which doesn't touch them either.
+    this.spider = null;
+    this.flea = null;
+    this.scorpion = null;
+    this.shot = null;
+    this.shooter.reset();
+    this.centipede.clear();
+    this.currentWave = { compositionIndex0: 0, chainLength: 12, singleHeads: 0, speed: 'fast' };
+    this.spawnWave(this.currentWave);
+    this.spiderTimer = 2.4;
+    this.fleaAllowedTimer = 4;
+    this.scorpionTimer = SCORPION.SPAWN_CHECK_INTERVAL_SECONDS;
+    this.attractFrame = 0;
+    this.attractHVel = 1;
+    this.attractVVel = 1;
+    this.attractRespawnTimer = 0;
     this.state = 'HIGH_SCORE_ENTRY';
   }
 

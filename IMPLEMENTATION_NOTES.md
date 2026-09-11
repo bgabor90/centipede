@@ -422,6 +422,25 @@ everything for the whole sequence. Fixed by also calling `updateSpider`/
 `updateFlea`/`updateScorpion` each tally frame. Verified directly: the
 centipede stays frozen mid-tally while the spider keeps moving.
 
+## High-score entry runs a live demo backdrop, not a frozen board
+
+By the time `GetInitials` even runs, `:NotAttract` ($245d-$2487) has
+already flipped `attract_mode` and re-initialized the spider/centipede/
+flea for a fresh demo-style run -- initials entry is UI drawn on top of
+an already-running attract-style demo, not a static board. The
+`HIGH_SCORE_ENTRY` state previously wasn't handled in the update switch
+at all (fell through to a no-op default), so nothing moved, even though
+the renderer already drew the shooter for this state (a leftover sign
+this was the intent). Wired it to reuse the same `updateAttractDemo()`
+logic as attract mode, and reset the spider/centipede/flea/shooter in
+`beginHighScoreEntry()` first (mirroring `InitSpider`/`InitCentipede`/
+`InitFlea`) so the backdrop starts from a fresh wave instead of
+inheriting whatever partial state the player died in -- mushrooms are
+left alone, matching the real init sequence, which doesn't touch them
+either. Verified directly: a fresh 12-segment chain spawns, the shooter
+resets to its start position, and both are actively moving 60 frames
+later while still in `HIGH_SCORE_ENTRY`.
+
 ## Explicitly approximated (flagged, not verified anywhere)
 
 - Named RGB hex values for each DBGR color (the source names colors, e.g.
