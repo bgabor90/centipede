@@ -8,6 +8,7 @@ import {
   CENTIPEDE_FRAMES,
   FLEA_MASK,
   MUSHROOM_STAGES,
+  POISONED_MUSHROOM_STAGES,
   SCORPION_MASK,
   SHOOTER_MASK,
   SPIDER_FRAMES,
@@ -35,8 +36,6 @@ const COLORS = {
   scoreText: '#ffffff',
   hiScore: '#3ad6ff',
   attractText: '#ff8822',
-  stem: '#e8e8d8',
-  capPoison: '#a64bff',
   poisonedSeg: '#a64bff',
   spiderBody: '#00f01d',
   spiderLeg: '#fffbc0',
@@ -95,7 +94,7 @@ export class Renderer {
     this.drawPlayfieldBorder();
     if (features.showGrid) this.drawGrid();
 
-    this.drawMushrooms(game, palette.body, palette.eyes);
+    this.drawMushrooms(game, palette);
     this.drawCentipede(game, palette);
     if (game.spider) this.drawSpider(game.spider);
     if (game.flea) this.drawFlea(game.flea);
@@ -198,7 +197,7 @@ export class Renderer {
   }
 
   // -- entities -------------------------------------------------------------
-  private drawMushrooms(game: Game, fillColor: string, rimColor: string): void {
+  private drawMushrooms(game: Game, palette: { body: string; legs: string; eyes: string }): void {
     const custom = getCustomSpriteSheet();
     game.mushrooms.forEach((row, col, cell) => {
       const x = this.px(col);
@@ -211,12 +210,10 @@ export class Renderer {
         return;
       }
 
-      const fill = cell.poisoned ? COLORS.capPoison : fillColor;
-      const detail = cell.poisoned ? COLORS.capPoison : rimColor;
-      this.drawTileMask(MUSHROOM_STAGES[Math.min(cell.hits, MUSHROOM_STAGES.length - 1)], x, y, {
-        F: fill,
-        R: detail,
-        S: COLORS.stem,
+      const stages = cell.poisoned ? POISONED_MUSHROOM_STAGES : MUSHROOM_STAGES;
+      this.drawTileMask(stages[Math.min(cell.hits, stages.length - 1)], x, y, {
+        F: palette.body,
+        D: cell.poisoned ? palette.legs : palette.eyes,
       });
     });
   }

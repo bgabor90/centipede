@@ -18,60 +18,100 @@ export type Mask = string[];
 
 /**
  * Mushroom hit stages, sampled from the local reference sheet's mushroom
- * cells. `F` is the wave-colored cap/body and `S` is the pale stem/highlight.
- * The renderer chooses one stage per mushroom hit count before destruction.
+ * cells. `F` is the wave-colored cap/body and `D` is the second mushroom
+ * color. The renderer chooses one stage per mushroom hit count before
+ * destruction.
  */
 export const MUSHROOM_STAGES: Mask[] = [
   [
-    '.FFFF...',
-    'FFFFFF..',
-    'FFFFFFF.',
-    'FFFFFFF.',
-    'FFFFFF..',
-    '.FFFF...',
-    '...S....',
+    '.DFFFFD.',
+    'DFFFFFFD',
+    'DFFFFFFD',
+    'DDDDDDDD',
+    '..DFFD..',
+    '..DFFD..',
+    '..DDDD..',
     '........',
   ],
   [
-    'S.FFF...',
-    '.FFFFF..',
-    'FFFFFFF.',
-    'FFFFFFF.',
-    'FFFFFFF.',
-    '.FFFFF..',
-    '..FFF.S.',
+    '.DFFFFD.',
+    'DFFFFFFD',
+    'DFFFFFFD',
+    'D.DDDDDD',
+    '..DFFD..',
+    '...F....',
+    '........',
     '........',
   ],
   [
-    '..FFF...',
-    '.FFFFF..',
-    'FFFFFFF.',
-    'FFFFFFF.',
-    'FFFFFFF.',
-    '.FFFFF.S',
-    '..FFF...',
+    '.DFFFFD.',
+    'DFFFFFFD',
+    'DFFFFFFD',
+    'D.D.D.D.',
+    '..D.....',
+    '........',
+    '........',
     '........',
   ],
   [
-    '...FF...',
-    'S.FFFF.S',
-    '.FFFFFF.',
-    '.FFFFFF.',
-    '.FFFFFF.',
-    '.FFFFFF.',
-    '..FFFF..',
+    '.DFFFFD.',
+    'DFF.FFFD',
+    'D.F.F.FD',
+    '........',
+    '........',
+    '........',
+    '........',
     '........',
   ],
 ];
 
+/** Poisoned mushroom stages use the second row from the same mushroom sheet. */
+export const POISONED_MUSHROOM_STAGES: Mask[] = [
+  [
+    '..FFFF..',
+    '.FDDDDF.',
+    'FDDDDDDF',
+    'FDDDDDDF',
+    'FFFFFFFF',
+    '..FDDF..',
+    '..FDDF..',
+    '..FFFF..',
+  ],
+  [
+    '..FFFF..',
+    '.FDDDDF.',
+    'FDDDDDDF',
+    'FDDDDDDF',
+    'F.FFFFFF',
+    '..FDDF..',
+    '...D....',
+    '........',
+  ],
+  [
+    '..FFFF..',
+    '.FDDDDF.',
+    'FDDDDDDF',
+    'FDDDDDDF',
+    'F.F.F.F.',
+    '..F.....',
+    '........',
+    '........',
+  ],
+  [
+    '..FFFF..',
+    '.FDDDDF.',
+    'FDD.DDDF',
+    'F.D.D.DF',
+    '........',
+    '........',
+    '........',
+    '........',
+  ],
+];
 /**
- * Centipede body/head segment — a rounded bead held to a consistent ~8px
- * width (matching the mushroom tile's 8x8 scale) rather than flaring out
- * to fill the full 16px motion-object slot. Segments step exactly one grid
- * cell (8px) apart, so an 8px-wide body sits edge-to-edge with its
- * neighbors — connected, but each link still individually visible —
- * instead of overlapping into one undifferentiated tube. Legs and eyes
- * are drawn separately so they can animate.
+ * Centipede body/head animation, sampled from the eight-frame row in the
+ * centipede reference sheet. `F` is the body, `D` is the red/eye detail, and
+ * `L` is the pale leg/highlight that marches across the frames.
  */
 export const CENTIPEDE_FRAMES: Mask[] = [
   [
@@ -95,24 +135,64 @@ export const CENTIPEDE_FRAMES: Mask[] = [
     '........L.......',
   ],
   [
-    '................',
-    '....L.FFF.......',
-    '.....FFFFF......',
+    '.........L......',
+    '.....DDFF.......',
+    '....FDDFFF......',
     '....FFFFFFF.....',
-    '....DDFFFFF.....',
-    '....DDFFFFF.....',
-    '.....FDDFF......',
-    '......DDF.L.....',
+    '....FFFFFFF.....',
+    '....FDDFFF......',
+    '.....DDFF.......',
+    '.........L......',
+  ],
+  [
+    '........L.......',
+    '.....DDFF.......',
+    '....FDDFFF......',
+    '....FFFFFFF.....',
+    '....FFFFFFF.....',
+    '....FDDFFF......',
+    '.....DDFF.......',
+    '........L.......',
   ],
   [
     '.......L........',
-    '.....FFFF.......',
-    '....FFFFFF......',
+    '.....DDFF.......',
+    '....FDDFFF......',
     '....FFFFFFF.....',
     '....FFFFFFF.....',
-    '....FFFFFF......',
-    '.....FFFF.......',
+    '....FDDFFF......',
+    '.....DDFF.......',
     '.......L........',
+  ],
+  [
+    '......L.........',
+    '.....DDFF.......',
+    '....FDDFFF......',
+    '....FFFFFFF.....',
+    '....FFFFFFF.....',
+    '....FDDFFF......',
+    '.....DDFF.......',
+    '......L.........',
+  ],
+  [
+    '.....L..........',
+    '.....DDFF.......',
+    '....FDDFFF......',
+    '....FFFFFFF.....',
+    '....FFFFFFF.....',
+    '....FDDFFF......',
+    '.....DDFF.......',
+    '.....L..........',
+  ],
+  [
+    '......L.........',
+    '.....DDFF.......',
+    '....FDDFFF......',
+    '....FFFFFFF.....',
+    '....FFFFFFF.....',
+    '....FDDFFF......',
+    '.....DDFF.......',
+    '......L.........',
   ],
 ];
 
