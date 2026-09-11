@@ -147,6 +147,13 @@ export class Game {
   // ---------------------------------------------------------------------
 
   startNewGame(): void {
+    // The attract-mode demo intentionally runs on a fixed seed (see
+    // resetAttractMode) so it replays identically as a showcase loop.
+    // Real play must not inherit that seed — otherwise a fresh page load
+    // followed by an immediate click reproduces the exact same mushroom
+    // scatter, wave RNG choices, spider entry side, etc. every time,
+    // directly contradicting the manual's "never play twice" premise.
+    this.rng = new Random();
     this.score = 0;
     this.lives = this.options.startingLives;
     this.bonusLivesAwarded = 0;
