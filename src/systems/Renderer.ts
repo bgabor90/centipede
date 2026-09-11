@@ -95,14 +95,6 @@ export class Renderer {
     this.drawHeader(game, palette.eyes);
     if (features.showGrid) this.drawGrid();
 
-    // Real hardware writes the high-score table, coin/credit line, and
-    // bonus-life reminder into playfield tile RAM -- the same background
-    // layer as mushrooms -- so the still-running demo's motion objects
-    // (drawn on top of tiles) pass in front of that text rather than a
-    // screen blocking the demo. Drawing this before the entities below
-    // reproduces that layering.
-    if (game.state === 'ATTRACT') this.drawAttractOverlay(game);
-
     this.drawMushrooms(game, palette);
     if (game.state === 'LIFE_LOST_TALLY' && game.tallyHighlight) this.drawTallyHighlight(game.tallyHighlight);
     this.drawCentipede(game, palette);
@@ -113,6 +105,12 @@ export class Renderer {
     if (game.state === 'PLAYING' || game.state === 'ATTRACT' || game.state === 'HIGH_SCORE_ENTRY') {
       this.drawShooter(game.shooter, palette.legs);
     }
+
+    // The high-score table, coin/credit line, and bonus-life reminder read
+    // as illegible noise if the live demo's board (mushrooms, centipede,
+    // spider) renders on top of them, so this draws last -- UI text always
+    // wins over board elements here, not the other way around.
+    if (game.state === 'ATTRACT') this.drawAttractOverlay(game);
 
     this.drawFooter(game);
 
