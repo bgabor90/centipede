@@ -5,7 +5,7 @@ import type { FeatureFlags } from '../config';
 import { GLYPH_W, drawBitmapText, measureText } from './BitmapFont';
 import { getWavePalette } from './Palette';
 import {
-  CENTIPEDE_MASK,
+  CENTIPEDE_FRAMES,
   FLEA_MASK,
   MUSHROOM_STAGES,
   SCORPION_MASK,
@@ -244,23 +244,11 @@ export class Renderer {
       return;
     }
 
-    renderMask(this.putPixel, CENTIPEDE_MASK, cx, cy, { F: bodyColor }, flip);
-
-    // Legs poke out just past the body's edges (now ~8px wide, matching
-    // the mushroom/grid scale) and cycle their horizontal position (a
-    // "conveyor belt" effect along the body) at a fast, slightly-jumpy
-    // cadence like the original's frame-by-frame animation.
-    const legShift = Math.floor(this.frame / 4) % 2;
-    this.rect(cx - 5 + legShift, cy - 4, 1, 1, palette.legs);
-    this.rect(cx + 4 + legShift, cy - 4, 1, 1, palette.legs);
-    this.rect(cx - 5 + legShift, cy + 3, 1, 1, palette.legs);
-    this.rect(cx + 4 + legShift, cy + 3, 1, 1, palette.legs);
-
-    if (v.isHead) {
-      const eyeDx = flip ? -2 : 2;
-      this.rect(cx + eyeDx - 1, cy - 1, 1, 1, palette.eyes);
-      this.rect(cx + eyeDx + 1, cy - 1, 1, 1, palette.eyes);
-    }
+    renderMask(this.putPixel, pickMaskFrame(CENTIPEDE_FRAMES, this.frame), cx, cy, {
+      F: bodyColor,
+      D: palette.eyes,
+      L: palette.legs,
+    }, flip);
   }
 
   private drawSpider(spider: NonNullable<Game['spider']>): void {

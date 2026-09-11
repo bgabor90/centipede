@@ -17,19 +17,18 @@
 export type Mask = string[];
 
 /**
- * Mushroom hit stages, sampled from the local reference sheet's 8x8
- * mushroom cells. `F` is the main cap/body color, `R` is the second cap
- * detail color, and `S` is the pale stem/highlight color. The renderer
- * chooses one stage per mushroom hit count before destruction.
+ * Mushroom hit stages, sampled from the local reference sheet's mushroom
+ * cells. `F` is the wave-colored cap/body and `S` is the pale stem/highlight.
+ * The renderer chooses one stage per mushroom hit count before destruction.
  */
 export const MUSHROOM_STAGES: Mask[] = [
   [
-    '.RRFF...',
-    'FRRFFF..',
+    '.FFFF...',
+    'FFFFFF..',
     'FFFFFFF.',
     'FFFFFFF.',
-    'FRRFFF..',
-    '.RRFF...',
+    'FFFFFF..',
+    '.FFFF...',
     '...S....',
     '........',
   ],
@@ -37,20 +36,20 @@ export const MUSHROOM_STAGES: Mask[] = [
     'S.FFF...',
     '.FFFFF..',
     'FFFFFFF.',
-    'RRFFFFF.',
-    'RRFFFFF.',
-    '.FRRFF..',
-    '..RRF.S.',
+    'FFFFFFF.',
+    'FFFFFFF.',
+    '.FFFFF..',
+    '..FFF.S.',
     '........',
   ],
   [
-    '...FF...',
-    'S.FFFF.S',
-    '.FFFFFF.',
-    '.FFFFFF.',
-    '.RRFFRR.',
-    '.RRFFRR.',
-    '..FFFF..',
+    '..FFF...',
+    '.FFFFF..',
+    'FFFFFFF.',
+    'FFFFFFF.',
+    'FFFFFFF.',
+    '.FFFFF.S',
+    '..FFF...',
     '........',
   ],
   [
@@ -74,16 +73,50 @@ export const MUSHROOM_STAGES: Mask[] = [
  * instead of overlapping into one undifferentiated tube. Legs and eyes
  * are drawn separately so they can animate.
  */
-export const CENTIPEDE_MASK: Mask = [
-  '................',
-  '................',
-  '.....FFFFFF.....',
-  '....FFFFFFFF....',
-  '....FFFFFFFF....',
-  '....FFFFFFFF....',
-  '.....FFFFFF.....',
-  '................',
+export const CENTIPEDE_FRAMES: Mask[] = [
+  [
+    '.......L........',
+    '.....DDFF.......',
+    '....FDDFFF......',
+    '....FFFFFFF.....',
+    '....FFFFFFF.....',
+    '....FDDFFF......',
+    '.....DDFF.......',
+    '.......L........',
+  ],
+  [
+    '........L.......',
+    '.....DDFF.......',
+    '....FDDFFF......',
+    '....FFFFFFF.....',
+    '....FFFFFFF.....',
+    '....FDDFFF......',
+    '.....DDFF.......',
+    '........L.......',
+  ],
+  [
+    '................',
+    '....L.FFF.......',
+    '.....FFFFF......',
+    '....FFFFFFF.....',
+    '....DDFFFFF.....',
+    '....DDFFFFF.....',
+    '.....FDDFF......',
+    '......DDF.L.....',
+  ],
+  [
+    '.......L........',
+    '.....FFFF.......',
+    '....FFFFFF......',
+    '....FFFFFFF.....',
+    '....FFFFFFF.....',
+    '....FFFFFF......',
+    '.....FFFF.......',
+    '.......L........',
+  ],
 ];
+
+export const CENTIPEDE_MASK: Mask = CENTIPEDE_FRAMES[0];
 
 /**
  * Spider walk cycle.
