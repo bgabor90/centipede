@@ -687,7 +687,12 @@ export class Game {
     this.buildTallyQueue();
     this.tallyHighlight = null;
     this.state = 'LIFE_LOST_TALLY';
-    this.tallyTimer = 0;
+    // VERIFIED (ExplodePlayer, $2cc8): death sets a 48-frame (~0.8s) pause
+    // immediately, and RestoreShroom explicitly refuses to tally while the
+    // player's explosion sound is still playing. Seeding the tally timer
+    // with that pause (instead of 0) keeps the mushroom credits from
+    // starting to tick before the death explosion has had a moment to play.
+    this.tallyTimer = 48 / 60;
   }
 
   private buildTallyQueue(): void {

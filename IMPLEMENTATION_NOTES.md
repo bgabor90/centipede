@@ -160,6 +160,13 @@ Fetched and cross-checked this session (see citations in `config.ts` /
   `bonusLivesAwarded` (the next-threshold tracker) every time a threshold
   is crossed regardless of whether the cap blocks the actual life, matching
   the ROM's unconditional threshold-tracker update.
+- **Pre-tally death pause**: `ExplodePlayer` ($2cc8) sets a 48-frame
+  (~0.8s) pause immediately on death, and `RestoreShroom` explicitly
+  refuses to tally mushrooms while the player's explosion sound is still
+  playing. `killPlayer()` seeded the tally timer with 0, starting the
+  mushroom-credit ticks with no delay at all. Also re-verified (already
+  correct, no change) the wave-color palette table byte-for-byte against
+  the raw `:colors` listing at $267a.
 
 ## Behaviors kept from the Video Master's Guide (not overridden)
 
