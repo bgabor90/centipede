@@ -4,7 +4,7 @@ import type { SegmentView } from '../entities/Centipede';
 import type { FeatureFlags } from '../config';
 import { GLYPH_W, drawBitmapText, measureText } from './BitmapFont';
 import { getWavePalette } from './Palette';
-import { CENTIPEDE_MASK, FLEA_MASK, SCORPION_MASK, SPIDER_MASK, renderMask } from './Sprites';
+import { CENTIPEDE_MASK, FLEA_MASK, SCORPION_MASK, SPIDER_FRAMES, type Mask, renderMask } from './Sprites';
 import { getCustomSpriteSheet, pickFrame } from './spriteMapping';
 
 // Verified screen/tile geometry (6502disassembly.com/va-centipede/graphics.html):
@@ -29,8 +29,9 @@ const COLORS = {
   stem: '#e8e8d8',
   capPoison: '#a64bff',
   poisonedSeg: '#a64bff',
-  spiderBody: '#33d0ff',
-  spiderLeg: '#ff6ec8',
+  spiderBody: '#00f01d',
+  spiderLeg: '#fffbc0',
+  spiderCenter: '#ff1a0d',
   flea: '#ff3c6e',
   scorpion: '#ffb02e',
   scorpionTail: '#cc6a12',
@@ -297,12 +298,11 @@ export class Renderer {
       return;
     }
 
-    for (const [dx, dy] of [
-      [-7, -2], [7, -2], [-8, 1], [8, 1], [-6, 3], [6, 3], [-5, -3], [5, -3],
-    ] as const) {
-      this.rect(cx + dx, cy + dy, 2, 1, COLORS.spiderLeg);
-    }
-    renderMask(this.putPixel, SPIDER_MASK, cx, cy, { F: COLORS.spiderBody });
+    renderMask(this.putPixel, pickMaskFrame(SPIDER_FRAMES, this.frame), cx, cy, {
+      F: COLORS.spiderBody,
+      D: COLORS.spiderCenter,
+      L: COLORS.spiderLeg,
+    });
   }
 
   private drawFlea(flea: NonNullable<Game['flea']>): void {
@@ -478,4 +478,8 @@ export class Renderer {
 
 function pad(n: number, digits: number): string {
   return Math.floor(Math.max(0, n)).toString().padStart(digits, '0');
+}
+
+function pickMaskFrame(frames: Mask[], frameCounter: number, stepEveryNFrames = 4): Mask {
+  return frames[Math.floor(frameCounter / stepEveryNFrames) % frames.length];
 }

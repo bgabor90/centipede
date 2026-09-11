@@ -36,17 +36,98 @@ export const CENTIPEDE_MASK: Mask = [
   '................',
 ];
 
-/** Spider — a bulbous rounded body; the spindly legs are drawn separately. */
-export const SPIDER_MASK: Mask = [
-  '................',
-  '......FFFF......',
-  '....FFFFFFFF....',
-  '...FFFFFFFFFF...',
-  '...FFFFFFFFFF...',
-  '....FFFFFFFF....',
-  '......FFFF......',
-  '................',
+/**
+ * Spider walk cycle.
+ *
+ * The local reference sheet shows the spider as a low, wide 16x8 motion
+ * object: pale legs arcing around a red/green center, alternating between
+ * high-arched and flattened leg poses. These are original redraws built for
+ * this mask system from that silhouette and cadence.
+ */
+export const SPIDER_FRAMES: Mask[] = [
+  [
+    'L....L....L....L',
+    'LL...L....L...LL',
+    '.L..LDDDDDDL..L.',
+    'LL..DDFDDFDD..LL',
+    '...DDFFFFFDD....',
+    'LL..DDFDDFDD..LL',
+    '.L..LLFFFFLL..L.',
+    'L....L....L....L',
+  ],
+  [
+    '................',
+    'LLL..L....L..LLL',
+    'L..LLDDDDDDLL..L',
+    '...DDFDDFDD.....',
+    'LL.DDFFFFFDD.LL.',
+    '...DDFDDFDD.....',
+    'L..LLFFFFFLL..L.',
+    'LLL..L....L..LLL',
+  ],
+  [
+    'L..............L',
+    'LLL..L....L..LLL',
+    '..LLLDDDDDLLL...',
+    'L..DDFDDFDD..L..',
+    'LL.DDFFFFFDD.LL.',
+    '...DDFDDFDD.....',
+    '..LLLFFFFLLL....',
+    'L..............L',
+  ],
+  [
+    '................',
+    '....LL....LL....',
+    'LLL..DDDDDD..LLL',
+    '...DDFDDFDD.....',
+    'L..DDFFFFFDD..L.',
+    'LL.DDFDDFDD.LL..',
+    '..LLLFFFFLLL....',
+    '....LL....LL....',
+  ],
+  [
+    'L....L....L....L',
+    'LL...L....L...LL',
+    '.L..LDDDDDDL..L.',
+    'LL..DDFDDFDD..LL',
+    '...DDFFFFFDD....',
+    'LL..DDFDDFDD..LL',
+    '.L..LLFFFFLL..L.',
+    'L....L....L....L',
+  ],
+  [
+    '................',
+    'LLL..L....L..LLL',
+    'L..LLDDDDDDLL..L',
+    '...DDFDDFDD.....',
+    'LL.DDFFFFFDD.LL.',
+    '...DDFDDFDD.....',
+    'L..LLFFFFFLL..L.',
+    'LLL..L....L..LLL',
+  ],
+  [
+    '....L......L....',
+    '..LLL......LLL..',
+    'LL..LDDDDDDL..LL',
+    'L..DDFDDFDD..L..',
+    '...DDFFFFFDD....',
+    'L..DDFDDFDD..L..',
+    'LL..LFFFFFL..LL.',
+    '..LLL......LLL..',
+  ],
+  [
+    '................',
+    '..LLL......LLL..',
+    'LL..LDDDDDDL..LL',
+    '....DDFDDFDD....',
+    'L..DDFFFFFDD..L.',
+    'LL.DDFDDFDD.LL..',
+    '..LLLFFFFLLL....',
+    '................',
+  ],
 ];
+
+export const SPIDER_MASK: Mask = SPIDER_FRAMES[0];
 
 /**
  * Scorpion — elongated body with a curled tail (D) at the back and small
