@@ -456,6 +456,24 @@ HIGH_SCORE_ENTRY, just not this analogous screen). Verified directly: a
 fresh 12-segment chain spawns and is actively moving 60 frames later,
 still in GAME_OVER.
 
+## GAME_OVER and high-score entry are silent, like the rest of attract mode
+
+`UpdateSound` ($3079-$308b) starts with `ldx attract_mode; bpl :Playing` --
+when `attract_mode` is set, every POKEY channel is zeroed and the routine
+returns immediately, every frame. Per the two fixes above, `attract_mode`
+is already flipped true by `:NotAttract` before either "GAME OVER" or the
+initials-entry UI is ever drawn, so real hardware is completely silent
+through both screens' live demo backdrop, not just the literal attract
+loop. `AudioSystem.handle()`'s mute guard only checked
+`state === 'ATTRACT'`, so once the demo backdrop for GAME_OVER/
+HIGH_SCORE_ENTRY started actually running (previous two fixes), its fire/
+hit/death events would have started audibly triggering sound effects on
+screens real hardware keeps silent. Extended the guard to also mute
+during `'GAME_OVER'` and `'HIGH_SCORE_ENTRY'`. Verified directly: the
+same event batch (fire, centipede hit, spider hit, player death, flea
+spawn) produces sound calls when dispatched during `PLAYING` but zero
+calls during `ATTRACT`, `GAME_OVER`, or `HIGH_SCORE_ENTRY`.
+
 ## Explicitly approximated (flagged, not verified anywhere)
 
 - Named RGB hex values for each DBGR color (the source names colors, e.g.

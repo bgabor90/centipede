@@ -113,8 +113,12 @@ export class AudioSystem {
   // only plays during real gameplay. Attract-mode events (fire,
   // centipedeBodyHit, spiderHit, playerDeath, etc. -- the demo runs the
   // real simulation) were previously played through like any other game.
+  // GAME_OVER and HIGH_SCORE_ENTRY count as attract-mode too here --
+  // :NotAttract flips attract_mode *before* either screen even starts on
+  // real hardware, so their live demo backdrop is equally silent.
   handle(events: GameEvent[], state: GameStateName): void {
-    if (!this.ctx || this.muted || state === 'ATTRACT') return;
+    const isAttractLike = state === 'ATTRACT' || state === 'GAME_OVER' || state === 'HIGH_SCORE_ENTRY';
+    if (!this.ctx || this.muted || isAttractLike) return;
     for (const e of events) {
       switch (e.type) {
         // CH3 - shot / mushroom impact
