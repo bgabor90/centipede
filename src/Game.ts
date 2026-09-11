@@ -679,6 +679,21 @@ export class Game {
     return last.count + Math.ceil(over / FLEA.MUSHROOMS_NEEDED_INCREMENT_SCORE_STEP);
   }
 
+  /** Exposes the flea-eligibility check for the debug overlay -- lets you watch live whether the low-zone mushroom count has actually dropped below the threshold. */
+  get fleaDiagnostics(): { blockedByWave: boolean; blockedByScorpion: boolean; lowZoneCount: number; required: number; eligible: boolean } {
+    const blockedByWave = this.currentWave.compositionIndex0 === 0;
+    const blockedByScorpion = !!this.scorpion;
+    const lowZoneCount = this.mushrooms.countInfield(FLEA.LOW_MUSHROOM_ZONE_MAX_ROW);
+    const required = this.requiredInfieldMushrooms();
+    return {
+      blockedByWave,
+      blockedByScorpion,
+      lowZoneCount,
+      required,
+      eligible: !blockedByWave && !blockedByScorpion && lowZoneCount < required,
+    };
+  }
+
   private updateFlea(dt: number): void {
     if (this.flea) {
       this.flea.update(dt, this.mushrooms);

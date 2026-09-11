@@ -498,10 +498,12 @@ export class Renderer {
   }
 
   private drawDebug(game: Game): void {
+    const flea = game.fleaDiagnostics;
     const lines = [
       `${game.state} WAVE ${game.waveNumber}`,
       `SEGS ${game.centipede.totalSegments} CHAINS ${game.centipede.chains.length}`,
       `SHOOTER ${game.shooter.x.toFixed(1)} ${game.shooter.y.toFixed(1)}`,
+      `FLEA LOW ${flea.lowZoneCount}/${flea.required} WAVE0 ${flea.blockedByWave ? 1 : 0} SCORP ${flea.blockedByScorpion ? 1 : 0} OK ${flea.eligible ? 1 : 0}`,
     ];
     lines.forEach((l, i) => this.text(l, 2, HEADER_H + 2 + i * 8, '#33ff66'));
   }

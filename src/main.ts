@@ -72,8 +72,28 @@ function frame(now: number): void {
   if (paused) renderer.drawPausedBanner();
 }
 
+let wasHighScoreEntry = false;
+
 function handleHighScoreEntryInput(): void {
-  if (game.state !== 'HIGH_SCORE_ENTRY') return;
+  if (game.state !== 'HIGH_SCORE_ENTRY') {
+    wasHighScoreEntry = false;
+    return;
+  }
+  if (!wasHighScoreEntry) {
+    // Just entered this state. `firePressed` is a one-shot flag set the
+    // instant the fire button goes down and only cleared by
+    // consumeFirePress() -- and nothing consumes it during real gameplay,
+    // so the shot the player fired right before dying (or the click that
+    // dismissed GAME OVER) is often still sitting there unconsumed. Left
+    // alone, the very first tick of this state would read that stale press
+    // as an immediate "confirm," silently advancing past the first initial
+    // before the player has touched anything. Draining it here (without
+    // acting on it) requires a fresh press to actually confirm anything.
+    input.consumeFirePress();
+    input.consumeKeyPress('enter');
+    wasHighScoreEntry = true;
+    return;
+  }
   if (input.consumeKeyPress('arrowleft') || input.consumeKeyPress('a') || input.consumeKeyPress('arrowdown') || input.consumeKeyPress('s')) {
     game.changeInitial(-1);
   }
