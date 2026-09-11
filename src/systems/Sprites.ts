@@ -17,113 +17,361 @@
 export type Mask = string[];
 
 /**
- * Centipede body/head segment — a rounded bead held to a consistent ~8px
- * width (matching the mushroom tile's 8x8 scale) rather than flaring out
- * to fill the full 16px motion-object slot. Segments step exactly one grid
- * cell (8px) apart, so an 8px-wide body sits edge-to-edge with its
- * neighbors — connected, but each link still individually visible —
- * instead of overlapping into one undifferentiated tube. Legs and eyes
- * are drawn separately so they can animate.
+ * Mushroom hit stages, sampled from the local reference sheet's mushroom
+ * cells. `F` is the wave-colored cap/body and `D` is the second mushroom
+ * color. The renderer chooses one stage per mushroom hit count before
+ * destruction.
  */
-export const CENTIPEDE_MASK: Mask = [
-  '................',
-  '................',
-  '.....FFFFFF.....',
-  '....FFFFFFFF....',
-  '....FFFFFFFF....',
-  '....FFFFFFFF....',
-  '.....FFFFFF.....',
-  '................',
+export const MUSHROOM_STAGES: Mask[] = [
+  [
+    '.DFFFFD.',
+    'DFFFFFFD',
+    'DFFFFFFD',
+    'DDDDDDDD',
+    '..DFFD..',
+    '..DFFD..',
+    '..DDDD..',
+    '........',
+  ],
+  [
+    '.DFFFFD.',
+    'DFFFFFFD',
+    'DFFFFFFD',
+    'D.DDDDDD',
+    '..DFFD..',
+    '...F....',
+    '........',
+    '........',
+  ],
+  [
+    '.DFFFFD.',
+    'DFFFFFFD',
+    'DFFFFFFD',
+    'D.D.D.D.',
+    '..D.....',
+    '........',
+    '........',
+    '........',
+  ],
+  [
+    '.DFFFFD.',
+    'DFF.FFFD',
+    'D.F.F.FD',
+    '........',
+    '........',
+    '........',
+    '........',
+    '........',
+  ],
 ];
+
+/** Poisoned mushroom stages use the second row from the same mushroom sheet. */
+export const POISONED_MUSHROOM_STAGES: Mask[] = [
+  [
+    '..FFFF..',
+    '.FDDDDF.',
+    'FDDDDDDF',
+    'FDDDDDDF',
+    'FFFFFFFF',
+    '..FDDF..',
+    '..FDDF..',
+    '..FFFF..',
+  ],
+  [
+    '..FFFF..',
+    '.FDDDDF.',
+    'FDDDDDDF',
+    'FDDDDDDF',
+    'F.FFFFFF',
+    '..FDDF..',
+    '...D....',
+    '........',
+  ],
+  [
+    '..FFFF..',
+    '.FDDDDF.',
+    'FDDDDDDF',
+    'FDDDDDDF',
+    'F.F.F.F.',
+    '..F.....',
+    '........',
+    '........',
+  ],
+  [
+    '..FFFF..',
+    '.FDDDDF.',
+    'FDD.DDDF',
+    'F.D.D.DF',
+    '........',
+    '........',
+    '........',
+    '........',
+  ],
+];
+/**
+ * Centipede head animation, sampled from the red-detail eight-frame row in
+ * the centipede reference sheet. `F` is the body, `D` is the red/eye detail,
+ * and `L` is the pale leg/highlight that marches across the frames.
+ */
+export const CENTIPEDE_HEAD_FRAMES: Mask[] = [
+  [
+    '.......L........',
+    '.....DDFF.......',
+    '....FDDFFF......',
+    '....FFFFFFF.....',
+    '....FFFFFFF.....',
+    '....FDDFFF......',
+    '.....DDFF.......',
+    '.......L........',
+  ],
+  [
+    '........L.......',
+    '.....DDFF.......',
+    '....FDDFFF......',
+    '....FFFFFFF.....',
+    '....FFFFFFF.....',
+    '....FDDFFF......',
+    '.....DDFF.......',
+    '........L.......',
+  ],
+  [
+    '.........L......',
+    '.....DDFF.......',
+    '....FDDFFF......',
+    '....FFFFFFF.....',
+    '....FFFFFFF.....',
+    '....FDDFFF......',
+    '.....DDFF.......',
+    '.........L......',
+  ],
+  [
+    '........L.......',
+    '.....DDFF.......',
+    '....FDDFFF......',
+    '....FFFFFFF.....',
+    '....FFFFFFF.....',
+    '....FDDFFF......',
+    '.....DDFF.......',
+    '........L.......',
+  ],
+  [
+    '.......L........',
+    '.....DDFF.......',
+    '....FDDFFF......',
+    '....FFFFFFF.....',
+    '....FFFFFFF.....',
+    '....FDDFFF......',
+    '.....DDFF.......',
+    '.......L........',
+  ],
+  [
+    '......L.........',
+    '.....DDFF.......',
+    '....FDDFFF......',
+    '....FFFFFFF.....',
+    '....FFFFFFF.....',
+    '....FDDFFF......',
+    '.....DDFF.......',
+    '......L.........',
+  ],
+  [
+    '.....L..........',
+    '.....DDFF.......',
+    '....FDDFFF......',
+    '....FFFFFFF.....',
+    '....FFFFFFF.....',
+    '....FDDFFF......',
+    '.....DDFF.......',
+    '.....L..........',
+  ],
+  [
+    '......L.........',
+    '.....DDFF.......',
+    '....FDDFFF......',
+    '....FFFFFFF.....',
+    '....FFFFFFF.....',
+    '....FDDFFF......',
+    '.....DDFF.......',
+    '......L.........',
+  ],
+];
+
+/**
+ * Centipede body animation, sampled from the matching no-red eight-frame row
+ * in the centipede reference sheet.
+ */
+export const CENTIPEDE_BODY_FRAMES: Mask[] = [
+  [
+    '.......L........',
+    '.....FFFF.......',
+    '....FFFFFF......',
+    '....FFFFFFF.....',
+    '....FFFFFFF.....',
+    '....FFFFFF......',
+    '.....FFFF.......',
+    '.......L........',
+  ],
+  [
+    '........L.......',
+    '.....FFFF.......',
+    '....FFFFFF......',
+    '....FFFFFFF.....',
+    '....FFFFFFF.....',
+    '....FFFFFF......',
+    '.....FFFF.......',
+    '........L.......',
+  ],
+  [
+    '.........L......',
+    '.....FFFF.......',
+    '....FFFFFF......',
+    '....FFFFFFF.....',
+    '....FFFFFFF.....',
+    '....FFFFFF......',
+    '.....FFFF.......',
+    '.........L......',
+  ],
+  [
+    '........L.......',
+    '.....FFFF.......',
+    '....FFFFFF......',
+    '....FFFFFFF.....',
+    '....FFFFFFF.....',
+    '....FFFFFF......',
+    '.....FFFF.......',
+    '........L.......',
+  ],
+  [
+    '.......L........',
+    '.....FFFF.......',
+    '....FFFFFF......',
+    '....FFFFFFF.....',
+    '....FFFFFFF.....',
+    '....FFFFFF......',
+    '.....FFFF.......',
+    '.......L........',
+  ],
+  [
+    '......L.........',
+    '.....FFFF.......',
+    '....FFFFFF......',
+    '....FFFFFFF.....',
+    '....FFFFFFF.....',
+    '....FFFFFF......',
+    '.....FFFF.......',
+    '......L.........',
+  ],
+  [
+    '.....L..........',
+    '.....FFFF.......',
+    '....FFFFFF......',
+    '....FFFFFFF.....',
+    '....FFFFFFF.....',
+    '....FFFFFF......',
+    '.....FFFF.......',
+    '.....L..........',
+  ],
+  [
+    '......L.........',
+    '.....FFFF.......',
+    '....FFFFFF......',
+    '....FFFFFFF.....',
+    '....FFFFFFF.....',
+    '....FFFFFF......',
+    '.....FFFF.......',
+    '......L.........',
+  ],
+];
+
+export const CENTIPEDE_FRAMES: Mask[] = CENTIPEDE_BODY_FRAMES;
+export const CENTIPEDE_MASK: Mask = CENTIPEDE_BODY_FRAMES[0];
 
 /**
  * Spider walk cycle.
  *
- * The local reference sheet shows the spider as a low, wide 16x8 motion
- * object: pale legs arcing around a red/green center, alternating between
- * high-arched and flattened leg poses. These are original redraws built for
- * this mask system from that silhouette and cadence.
+ * Sampled from the spider row in the local reference sheet: a low, wide
+ * 16x8 motion object with pale legs arcing around a red/green center.
  */
 export const SPIDER_FRAMES: Mask[] = [
   [
-    'L....L....L....L',
-    'LL...L....L...LL',
-    '.L..LDDDDDDL..L.',
-    'LL..DDFDDFDD..LL',
-    '...DDFFFFFDD....',
-    'LL..DDFDDFDD..LL',
-    '.L..LLFFFFLL..L.',
-    'L....L....L....L',
+    '..L.........L...',
+    '.L.L.......L.L..',
+    'L...L..F..L...L.',
+    '.....LDFDL......',
+    '..L..DDFDD..L...',
+    '.L.L.FFFFF.L.L..',
+    'L...LFDDDFL...L.',
+    '......FDF.......',
   ],
   [
     '................',
-    'LLL..L....L..LLL',
-    'L..LLDDDDDDLL..L',
-    '...DDFDDFDD.....',
-    'LL.DDFFFFFDD.LL.',
-    '...DDFDDFDD.....',
-    'L..LLFFFFFLL..L.',
-    'LLL..L....L..LLL',
-  ],
-  [
-    'L..............L',
-    'LLL..L....L..LLL',
-    '..LLLDDDDDLLL...',
-    'L..DDFDDFDD..L..',
-    'LL.DDFFFFFDD.LL.',
-    '...DDFDDFDD.....',
-    '..LLLFFFFLLL....',
-    'L..............L',
+    '.LLL.......LLL..',
+    'L...L..F..L...L.',
+    '.....LDFDL......',
+    '.....DDFDD......',
+    '.LLL.FFFFF.LLL..',
+    'L...LFDDFFL...L.',
+    '......FDF.......',
   ],
   [
     '................',
-    '....LL....LL....',
-    'LLL..DDDDDD..LLL',
-    '...DDFDDFDD.....',
-    'L..DDFFFFFDD..L.',
-    'LL.DDFDDFDD.LL..',
-    '..LLLFFFFLLL....',
-    '....LL....LL....',
-  ],
-  [
-    'L....L....L....L',
-    'LL...L....L...LL',
-    '.L..LDDDDDDL..L.',
-    'LL..DDFDDFDD..LL',
-    '...DDFFFFFDD....',
-    'LL..DDFDDFDD..LL',
-    '.L..LLFFFFLL..L.',
-    'L....L....L....L',
+    '................',
+    '..LLL..F..LLL...',
+    '.L...LDFDL...L..',
+    'L....DDFDD....L.',
+    '..LL.FFFFF.LL...',
+    '.L..LFFDDFL..L..',
+    'L.....FDF.....L.',
   ],
   [
     '................',
-    'LLL..L....L..LLL',
-    'L..LLDDDDDDLL..L',
-    '...DDFDDFDD.....',
-    'LL.DDFFFFFDD.LL.',
-    '...DDFDDFDD.....',
-    'L..LLFFFFFLL..L.',
-    'LLL..L....L..LLL',
-  ],
-  [
-    '....L......L....',
-    '..LLL......LLL..',
-    'LL..LDDDDDDL..LL',
-    'L..DDFDDFDD..L..',
-    '...DDFFFFFDD....',
-    'L..DDFDDFDD..L..',
-    'LL..LFFFFFL..LL.',
-    '..LLL......LLL..',
+    '................',
+    '.......F........',
+    '...LLLDFDLLL....',
+    '..L..DDFDD..L...',
+    '.L..LFFFFFL..L..',
+    'L...LFFDFFL...L.',
+    '..LL..FDF..LL...',
   ],
   [
     '................',
-    '..LLL......LLL..',
-    'LL..LDDDDDDL..LL',
-    '....DDFDDFDD....',
-    'L..DDFFFFFDD..L.',
-    'LL.DDFDDFDD.LL..',
-    '..LLLFFFFLLL....',
     '................',
+    '..LLL..F..LLL...',
+    '.L...LDFDL...L..',
+    'L....DDFDD....L.',
+    '..LL.FFFFF.LL...',
+    '.L..LFDDDFL..L..',
+    'L.....FDF.....L.',
+  ],
+  [
+    '................',
+    '.LLL.......LLL..',
+    'L...L..F..L...L.',
+    '.....LDFDL......',
+    '.....DDFDD......',
+    '.LLL.FFFFF.LLL..',
+    'L...LFDDFFL...L.',
+    '......FDF.......',
+  ],
+  [
+    '...L.......L....',
+    '...L.......L....',
+    '..L.L..F..L.L...',
+    '.L...LDFDL...L..',
+    'L..L.DDFDD.L..L.',
+    '...L.FFFFF.L....',
+    '..L.LFFDDFL.L...',
+    '.L....FDF....L..',
+  ],
+  [
+    '....L.....L.....',
+    '....L.....L.....',
+    '...LL..F..LL....',
+    '..L..LDFDL..L...',
+    '.L...DDFDD...L..',
+    'L..L.FFFFF.L..L.',
+    '...LLFFDFFLL....',
+    '..L...FDF...L...',
   ],
 ];
 
@@ -155,6 +403,25 @@ export const FLEA_MASK: Mask = [
   '.....FFFF.......',
   '.....FFFF.......',
   '......FF........',
+];
+
+/**
+ * Shooter / player "bug blaster".
+ *
+ * The reference sheet stores this as the lower half of the upper-left
+ * player/shot cell: a narrow pale body with red face/cowl detail. It is
+ * static in the sheet, so the renderer uses this single mask as the built-in
+ * fallback when no custom shooter cell is configured.
+ */
+export const SHOOTER_MASK: Mask = [
+  '.......F........',
+  '......FFF.......',
+  '.....DDFDD......',
+  '....FDDFDDF.....',
+  '....FFFFFFF.....',
+  '.....FFFFF......',
+  '......FFF.......',
+  '......FFF.......',
 ];
 
 export const MASK_W = 16;

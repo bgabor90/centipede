@@ -4,7 +4,18 @@ import type { SegmentView } from '../entities/Centipede';
 import type { FeatureFlags } from '../config';
 import { GLYPH_W, drawBitmapText, measureText } from './BitmapFont';
 import { getWavePalette } from './Palette';
-import { CENTIPEDE_MASK, FLEA_MASK, SCORPION_MASK, SPIDER_FRAMES, type Mask, renderMask } from './Sprites';
+import {
+  CENTIPEDE_BODY_FRAMES,
+  CENTIPEDE_HEAD_FRAMES,
+  FLEA_MASK,
+  MUSHROOM_STAGES,
+  POISONED_MUSHROOM_STAGES,
+  SCORPION_MASK,
+  SHOOTER_MASK,
+  SPIDER_FRAMES,
+  type Mask,
+  renderMask,
+} from './Sprites';
 import { getCustomSpriteSheet, pickFrame } from './spriteMapping';
 
 // Verified screen/tile geometry (6502disassembly.com/va-centipede/graphics.html):
@@ -26,12 +37,12 @@ const COLORS = {
   scoreText: '#ffffff',
   hiScore: '#3ad6ff',
   attractText: '#ff8822',
-  stem: '#e8e8d8',
-  capPoison: '#a64bff',
   poisonedSeg: '#a64bff',
   spiderBody: '#00f01d',
   spiderLeg: '#fffbc0',
   spiderCenter: '#ff1a0d',
+  shooterBody: '#fffbc0',
+  shooterDetail: '#ff1a0d',
   flea: '#ff3c6e',
   scorpion: '#ffb02e',
   scorpionTail: '#cc6a12',
@@ -39,35 +50,6 @@ const COLORS = {
   gridLine: 'rgba(255,255,255,0.08)',
   disclaimer: '#3a3a3a',
 } as const;
-
-// 8x8 mushroom mask: a two-tone cap (fill 'F' + a darker rim 'R' outline)
-// over a stem — a rounder, less flat-looking mushroom than a single-color
-// cap. Damage removes cells in `CAP_BITE_ORDER`.
-const MUSHROOM_MASK = [
-  '..RRRR..',
-  '.RFFFFR.',
-  'RFFFFFFR',
-  'RFFFFFFR',
-  '.RFFFFR.',
-  '..SSSS..',
-  '..SSSS..',
-  '........',
-].map((row) => row.split(''));
-
-// Every cap cell (fill or rim), ordered by distance from the top-right
-// corner so damage reads as a bite eating inward from one side, generated
-// from the mask rather than hand-listed.
-const CAP_BITE_ORDER: Array<[number, number]> = (() => {
-  const cells: Array<[number, number]> = [];
-  for (let r = 0; r < MUSHROOM_MASK.length; r++) {
-    for (let c = 0; c < MUSHROOM_MASK[r].length; c++) {
-      if (MUSHROOM_MASK[r][c] !== '.' && MUSHROOM_MASK[r][c] !== 'S') cells.push([r, c]);
-    }
-  }
-  cells.sort((a, b) => a[0] + (7 - a[1]) - (b[0] + (7 - b[1])));
-  return cells;
-})();
-const BITE_CHUNK = Math.ceil(CAP_BITE_ORDER.length / 3);
 
 /**
  * Everything in this renderer is drawn on a hard pixel grid — every fill
@@ -113,7 +95,7 @@ export class Renderer {
     this.drawPlayfieldBorder();
     if (features.showGrid) this.drawGrid();
 
-    this.drawMushrooms(game, palette.body, palette.eyes);
+    this.drawMushrooms(game, palette);
     this.drawCentipede(game, palette);
     if (game.spider) this.drawSpider(game.spider);
     if (game.flea) this.drawFlea(game.flea);
@@ -150,11 +132,11 @@ export class Renderer {
     this.ctx.fillStyle = color;
     this.ctx.fillRect(Math.round(x), Math.round(y), w, h);
   }
-  private text(str: string, x: number, y: number, color: string, scale = 1): void {
-    drawBitmapText(this.ctx, str, x, y, color, scale);
+  private text(str: string, x: number, y: number, color: string, scale = 1, spacing = 0): void {
+    drawBitmapText(this.ctx, str, x, y, color, scale, spacing);
   }
-  private centeredText(str: string, cx: number, y: number, color: string, scale = 1): void {
-    drawBitmapText(this.ctx, str, cx - measureText(str, scale) / 2, y, color, scale);
+  private centeredText(str: string, cx: number, y: number, color: string, scale = 1, spacing = 0): void {
+    drawBitmapText(this.ctx, str, cx - measureText(str, scale, spacing) / 2, y, color, scale, spacing);
   }
 
   // -- header / footer ------------------------------------------------------
@@ -164,10 +146,10 @@ export class Renderer {
   // columns), height is not.
   private drawHeader(game: Game, textColor: string): void {
     this.text('1UP', 2, 1, textColor);
-    this.text(pad(game.score, 6), 24, 1, textColor);
-    this.centeredText('HIGH SCORE', CANVAS_W / 2, 1, COLORS.hiScore);
+    this.text(pad(game.score, 6), 32, 1, textColor);
+    this.centeredText('HIGH SCORE', CANVAS_W / 2 + CELL, 1, COLORS.hiScore);
     const hiVal = pad(game.highScore, 6);
-    this.text(hiVal, CANVAS_W / 2 + 45, 1, textColor);
+    this.text(hiVal, CANVAS_W / 2 + 56, 1, textColor);
 
     const lives = Math.max(0, game.lives - 1);
     for (let i = 0; i < lives; i++) {
@@ -179,7 +161,7 @@ export class Renderer {
   // here to match, with a small disclaimer only shown outside play.
   private drawFooter(game: Game): void {
     if (game.state === 'ATTRACT' || game.state === 'GAME_OVER') {
-      this.centeredText('FAN-MADE - NOT AN ATARI PRODUCT', CANVAS_W / 2, CANVAS_H - 7, COLORS.disclaimer);
+      this.centeredText('FAN-MADE - NOT AN ATARI PRODUCT', CANVAS_W / 2, CANVAS_H - 7, COLORS.disclaimer, 1, -1);
     }
   }
 
@@ -216,7 +198,7 @@ export class Renderer {
   }
 
   // -- entities -------------------------------------------------------------
-  private drawMushrooms(game: Game, fillColor: string, rimColor: string): void {
+  private drawMushrooms(game: Game, palette: { body: string; legs: string; eyes: string }): void {
     const custom = getCustomSpriteSheet();
     game.mushrooms.forEach((row, col, cell) => {
       const x = this.px(col);
@@ -229,20 +211,11 @@ export class Renderer {
         return;
       }
 
-      const fill = cell.poisoned ? COLORS.capPoison : fillColor;
-      const rim = cell.poisoned ? COLORS.capPoison : rimColor;
-      const removed = new Set(
-        CAP_BITE_ORDER.slice(0, cell.hits * BITE_CHUNK).map(([r, c]) => `${r},${c}`)
-      );
-      for (let r = 0; r < 8; r++) {
-        for (let c = 0; c < 8; c++) {
-          const ch = MUSHROOM_MASK[r][c];
-          if (ch === '.') continue;
-          if ((ch === 'F' || ch === 'R') && removed.has(`${r},${c}`)) continue;
-          const color = ch === 'F' ? fill : ch === 'R' ? rim : COLORS.stem;
-          this.rect(x + c, y + r, 1, 1, color);
-        }
-      }
+      const stages = cell.poisoned ? POISONED_MUSHROOM_STAGES : MUSHROOM_STAGES;
+      this.drawTileMask(stages[Math.min(cell.hits, stages.length - 1)], x, y, {
+        F: palette.body,
+        D: cell.poisoned ? palette.legs : palette.eyes,
+      });
     });
   }
 
@@ -269,23 +242,12 @@ export class Renderer {
       return;
     }
 
-    renderMask(this.putPixel, CENTIPEDE_MASK, cx, cy, { F: bodyColor }, flip);
-
-    // Legs poke out just past the body's edges (now ~8px wide, matching
-    // the mushroom/grid scale) and cycle their horizontal position (a
-    // "conveyor belt" effect along the body) at a fast, slightly-jumpy
-    // cadence like the original's frame-by-frame animation.
-    const legShift = Math.floor(this.frame / 4) % 2;
-    this.rect(cx - 5 + legShift, cy - 4, 1, 1, palette.legs);
-    this.rect(cx + 4 + legShift, cy - 4, 1, 1, palette.legs);
-    this.rect(cx - 5 + legShift, cy + 3, 1, 1, palette.legs);
-    this.rect(cx + 4 + legShift, cy + 3, 1, 1, palette.legs);
-
-    if (v.isHead) {
-      const eyeDx = flip ? -2 : 2;
-      this.rect(cx + eyeDx - 1, cy - 1, 1, 1, palette.eyes);
-      this.rect(cx + eyeDx + 1, cy - 1, 1, 1, palette.eyes);
-    }
+    const frames = v.isHead ? CENTIPEDE_HEAD_FRAMES : CENTIPEDE_BODY_FRAMES;
+    renderMask(this.putPixel, pickMaskFrame(frames, this.frame), cx, cy, {
+      F: bodyColor,
+      D: palette.eyes,
+      L: palette.legs,
+    }, flip);
   }
 
   private drawSpider(spider: NonNullable<Game['spider']>): void {
@@ -342,7 +304,7 @@ export class Renderer {
     this.rect(cx, cy - 3, 1, 6, COLORS.shot);
   }
 
-  private drawShooter(shooter: Game['shooter'], color: string): void {
+  private drawShooter(shooter: Game['shooter'], _color: string): void {
     const { cx, cy } = this.center(shooter.x, shooter.y);
 
     const custom = getCustomSpriteSheet();
@@ -352,7 +314,22 @@ export class Renderer {
       return;
     }
 
-    this.drawDiamond(cx, cy, 3, color);
+    renderMask(this.putPixel, SHOOTER_MASK, cx, cy, {
+      F: COLORS.shooterBody,
+      D: COLORS.shooterDetail,
+    });
+  }
+
+  private drawTileMask(mask: Mask, x: number, y: number, colors: Record<string, string>): void {
+    for (let r = 0; r < 8; r++) {
+      const row = mask[r];
+      for (let c = 0; c < 8; c++) {
+        const ch = row[c];
+        if (ch === '.') continue;
+        const color = colors[ch];
+        if (color) this.rect(x + c, y + r, 1, 1, color);
+      }
+    }
   }
 
   private drawCrtOverlay(): void {
