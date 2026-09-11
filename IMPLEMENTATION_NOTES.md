@@ -441,6 +441,21 @@ either. Verified directly: a fresh 12-segment chain spawns, the shooter
 resets to its start position, and both are actively moving 60 frames
 later while still in `HIGH_SCORE_ENTRY`.
 
+## GAME_OVER also runs a live demo backdrop
+
+Same source as the high-score-entry fix above (`:NotAttract`,
+$245d-$2487): the spider/centipede/flea reset and demo restart happen
+*before* "GAME OVER" is drawn too, unconditionally -- both screens sit
+on top of the same freshly-restarted demo, not a frozen board.
+`updateGameOver()` only counted its timer down; nothing moved. Extracted
+the entity-reset logic (previously only in `beginHighScoreEntry()`) into
+a shared `resetEntitiesForPostGameDemo()` used by both, had
+`updateGameOver()` also call `updateAttractDemo()`, and added GAME_OVER
+to the renderer's draw-shooter condition (it was already drawing for
+HIGH_SCORE_ENTRY, just not this analogous screen). Verified directly: a
+fresh 12-segment chain spawns and is actively moving 60 frames later,
+still in GAME_OVER.
+
 ## Explicitly approximated (flagged, not verified anywhere)
 
 - Named RGB hex values for each DBGR color (the source names colors, e.g.

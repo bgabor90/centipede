@@ -116,7 +116,7 @@ export class Renderer {
     if (game.state === 'PLAYER_DEATH_ANIMATION') {
       this.drawPlayerExplosion(game);
     }
-    if (game.state === 'PLAYING' || game.state === 'ATTRACT' || game.state === 'HIGH_SCORE_ENTRY') {
+    if (game.state === 'PLAYING' || game.state === 'ATTRACT' || game.state === 'HIGH_SCORE_ENTRY' || game.state === 'GAME_OVER') {
       this.drawShooter(game.shooter, palette.legs);
     }
 

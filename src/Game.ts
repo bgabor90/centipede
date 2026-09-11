@@ -924,6 +924,7 @@ export class Game {
       // are separate steps that both run, not mutually exclusive. This
       // previously skipped straight to high-score entry for a qualifying
       // score, never showing "GAME OVER" at all in that case.
+      this.resetEntitiesForPostGameDemo();
       this.state = 'GAME_OVER';
       this.gameOverTimer = 2.5;
       this.gameOverQualifiesForVanityTable = this.qualifiesForVanityTable(this.score);
@@ -1019,6 +1020,7 @@ export class Game {
   }
 
   private updateGameOver(dt: number): void {
+    this.updateAttractDemo(dt);
     this.gameOverTimer -= dt;
     if (this.gameOverTimer <= 0) this.finishGameOver();
   }
@@ -1038,16 +1040,14 @@ export class Game {
     return score > 0 && (this.highScores.length < 8 || score > this.highScores[this.highScores.length - 1].score);
   }
 
-  private beginHighScoreEntry(): void {
-    this.pendingInitialScore = this.score;
-    this.initials = ['A', 'A', 'A'];
-    this.initialIndex = 0;
-    // VERIFIED (:NotAttract, $245d-$2487): before GetInitials even runs,
-    // the cabinet re-initializes the spider/centipede/flea for a fresh
-    // demo-style run -- that's the backdrop that keeps playing behind the
-    // initials-entry UI, not whatever partial wave state the player died
-    // in. Mushrooms are left as-is (already fully restored by the tally),
-    // matching the real init sequence, which doesn't touch them either.
+  // VERIFIED (:NotAttract, $245d-$2487): before either "GAME OVER" or
+  // GetInitials runs, the cabinet unconditionally re-initializes the
+  // spider/centipede/flea for a fresh demo-style run -- that's the
+  // backdrop that keeps playing behind both screens, not whatever partial
+  // wave state the player died in. Mushrooms are left as-is (already
+  // fully restored by the tally), matching the real init sequence, which
+  // doesn't touch them either. Shared by GAME_OVER and HIGH_SCORE_ENTRY.
+  private resetEntitiesForPostGameDemo(): void {
     this.spider = null;
     this.flea = null;
     this.scorpion = null;
@@ -1063,6 +1063,13 @@ export class Game {
     this.attractHVel = 1;
     this.attractVVel = 1;
     this.attractRespawnTimer = 0;
+  }
+
+  private beginHighScoreEntry(): void {
+    this.pendingInitialScore = this.score;
+    this.initials = ['A', 'A', 'A'];
+    this.initialIndex = 0;
+    this.resetEntitiesForPostGameDemo();
     this.state = 'HIGH_SCORE_ENTRY';
   }
 
