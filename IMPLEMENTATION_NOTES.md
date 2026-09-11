@@ -474,6 +474,28 @@ same event batch (fire, centipede hit, spider hit, player death, flea
 spawn) produces sound calls when dispatched during `PLAYING` but zero
 calls during `ATTRACT`, `GAME_OVER`, or `HIGH_SCORE_ENTRY`.
 
+## High-score entry is a frozen screen, not a live demo (correction)
+
+A prior pass in this project had `HIGH_SCORE_ENTRY` reuse the live
+`ATTRACT`-style update loop, reasoning from `:NotAttract` resetting the
+spider/centipede/flea before `GetInitials` runs. That reset is real, but
+it's a one-time starting layout, not an ongoing demo -- the main loop
+($2029-$202c) is `jsr GetInitials; bpl :MainLoop`: while `GetInitials`
+reports "still entering initials" (N-flag clear), execution branches
+straight back to the top of the main loop every single frame, skipping
+`AttractMove`/`DrawScores`/`MoveCentipede`/`MovePlayer`/etc entirely.
+Nothing moves on real hardware while the player is entering initials --
+the freshly-reset wave just sits there. Removed the `updateAttractDemo()`
+call from the `HIGH_SCORE_ENTRY` case; `resetEntitiesForPostGameDemo()`
+still runs once on entry (still correct -- that's the one-time reset),
+it just no longer keeps animating afterward. `GAME_OVER` is unaffected
+by this correction and keeps its live demo: `GetInitials` only takes the
+initials-entry branch when `plyr_hs_init_slot` is set, which is exactly
+the case `HIGH_SCORE_ENTRY` (not `GAME_OVER`) represents. Verified
+directly: 90 simulated frames leave the shooter and centipede chain at
+identical positions during `HIGH_SCORE_ENTRY`, while the same 90 frames
+during a non-qualifying `GAME_OVER` move both.
+
 ## Explicitly approximated (flagged, not verified anywhere)
 
 - Named RGB hex values for each DBGR color (the source names colors, e.g.

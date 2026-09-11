@@ -313,14 +313,16 @@ export class Game {
         this.updateGameOver(dt);
         break;
       case 'HIGH_SCORE_ENTRY':
-        // VERIFIED (:NotAttract, $245d-$2487): by the time GetInitials
-        // even runs, the real cabinet has already flipped attract_mode
-        // and re-initialized the spider/centipede/flea for a fresh
-        // attract-style demo -- initials entry is UI drawn on top of that
-        // already-running demo, not a frozen board. Reuses the same demo
-        // update as ATTRACT (which is also why the shooter is drawn
-        // during this state -- see Renderer.ts).
-        this.updateAttractDemo(dt);
+        // VERIFIED (main loop, $2029-$202c): `jsr GetInitials; bpl
+        // :MainLoop` -- while GetInitials reports "still entering
+        // initials" (N-flag clear), the main loop branches straight back
+        // to the top every frame, skipping AttractMove/DrawScores/
+        // MoveCentipede/MovePlayer/etc entirely. The fresh demo wave from
+        // resetEntitiesForPostGameDemo() is drawn once and then sits
+        // frozen for the whole duration of initials entry -- nothing
+        // moves until all three initials are confirmed. (Corrects an
+        // earlier pass in this project that had this state reuse the
+        // live ATTRACT update loop.)
         break;
       default:
         break;
@@ -1042,11 +1044,13 @@ export class Game {
 
   // VERIFIED (:NotAttract, $245d-$2487): before either "GAME OVER" or
   // GetInitials runs, the cabinet unconditionally re-initializes the
-  // spider/centipede/flea for a fresh demo-style run -- that's the
-  // backdrop that keeps playing behind both screens, not whatever partial
-  // wave state the player died in. Mushrooms are left as-is (already
-  // fully restored by the tally), matching the real init sequence, which
-  // doesn't touch them either. Shared by GAME_OVER and HIGH_SCORE_ENTRY.
+  // spider/centipede/flea for a fresh demo-style layout -- not whatever
+  // partial wave state the player died in. Mushrooms are left as-is
+  // (already fully restored by the tally), matching the real init
+  // sequence, which doesn't touch them either. Shared by GAME_OVER and
+  // HIGH_SCORE_ENTRY as their one-time starting layout: GAME_OVER then
+  // keeps this running as a live demo, while HIGH_SCORE_ENTRY freezes it
+  // (see the HIGH_SCORE_ENTRY case in update() for why).
   private resetEntitiesForPostGameDemo(): void {
     this.spider = null;
     this.flea = null;
