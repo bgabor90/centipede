@@ -10,7 +10,8 @@ import type { InputState } from '../Game';
 export class InputSystem {
   private mouseCol = 15;
   private mouseRow = 1;
-  private usingMouse = false;
+  /** Which input last actually moved the pointer/keys — null means "hold position." */
+  private activeMethod: 'pointer' | 'keyboard' | null = null;
   private keys = new Set<string>();
   private fireHeld = false;
   /** One-shot key presses (e.g. pause, feature panel) — populated on keydown
@@ -47,7 +48,7 @@ export class InputSystem {
   }
 
   private onMouseMove(e: MouseEvent): void {
-    this.usingMouse = true;
+    this.activeMethod = 'pointer';
     const rect = this.canvas.getBoundingClientRect();
     const scaleX = this.canvas.width / rect.width;
     const scaleY = this.canvas.height / rect.height;
@@ -61,7 +62,7 @@ export class InputSystem {
     e.preventDefault();
     const t = e.touches[0];
     if (!t) return;
-    this.usingMouse = true;
+    this.activeMethod = 'pointer';
     this.fireHeld = true;
     const rect = this.canvas.getBoundingClientRect();
     const scaleX = this.canvas.width / rect.width;
@@ -96,7 +97,7 @@ export class InputSystem {
     const keyboardActive = left || right || up || down;
 
     if (keyboardActive) {
-      this.usingMouse = false;
+      this.activeMethod = 'keyboard';
       const dx = (right ? 1 : 0) - (left ? 1 : 0);
       const dy = (up ? 1 : 0) - (down ? 1 : 0);
       return {
@@ -107,11 +108,23 @@ export class InputSystem {
       };
     }
 
+    if (this.activeMethod === 'pointer') {
+      return {
+        targetX: clamp(this.mouseCol, 1, GRID.COLS),
+        targetY: clamp(this.mouseRow, 1, ZONES.SHOOTER_MAX_ROW),
+        firing: this.fireHeld,
+        instantMove: true,
+      };
+    }
+
+    // No movement key held and the pointer hasn't moved (or keyboard was
+    // last in control) — hold the current position rather than drifting
+    // toward a stale/default target.
     return {
-      targetX: clamp(this.mouseCol, 1, GRID.COLS),
-      targetY: clamp(this.mouseRow, 1, ZONES.SHOOTER_MAX_ROW),
+      targetX: shooterX,
+      targetY: shooterY,
       firing: this.fireHeld,
-      instantMove: this.usingMouse,
+      instantMove: true,
     };
   }
 }
