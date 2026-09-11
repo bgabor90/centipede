@@ -264,7 +264,7 @@ export class Game {
     this.shooter.moveToward(input.targetX, input.targetY, dt, this.mushrooms, input.instantMove);
 
     if (input.firing && !this.shot) {
-      this.shot = new Shot(this.shooter.col, this.shooter.y + 0.4);
+      this.shot = new Shot(this.shooter.col, this.shooter.y + 0.4, this.shooter.x);
       this.emit('fire');
     }
 
@@ -312,7 +312,7 @@ export class Game {
 
     this.attractFireTimer -= dt;
     if (this.attractFireTimer <= 0 && !this.shot) {
-      this.shot = new Shot(this.shooter.col, this.shooter.y + 0.4);
+      this.shot = new Shot(this.shooter.col, this.shooter.y + 0.4, this.shooter.x);
       this.attractFireTimer = 0.24 + (Math.sin(t * 2.7) + 1) * 0.16;
     }
 
@@ -533,6 +533,16 @@ export class Game {
   }
 
   private triggerSideFeed(): void {
+    // The attract-mode demo runs the full simulation unattended for its
+    // whole ~26s cycle with only a scripted (non-competent) shooter, so a
+    // link reaching bottom there is expected, not a failure state worth
+    // reacting to. Letting the Side Feed run unmanaged for that long piles
+    // up links that cycle in whatever pocket the fixed demo mushroom
+    // layout channels them into — reproducible every time, since attract
+    // mode uses a fixed RNG seed — which reads as the centipede getting
+    // "stuck." Real cabinets don't let their canned attract loop spiral
+    // like that, so it's suppressed here rather than played out.
+    if (this.state === 'ATTRACT') return;
     if (!this.sideFeedActive) {
       this.sideFeedActive = true;
       this.sideFeedLinksThisActivation = 0;
@@ -675,12 +685,19 @@ export class Game {
   private spawnWave(spec: WaveSpec): void {
     this.justClearedWave = false;
     this.centipede.clear();
-    const mainSpeed = this.score >= WAVE_CYCLE.SLOW_FAST_STOPS_AT_SCORE ? CENTIPEDE_SPEED.FAST : CENTIPEDE_SPEED.SLOW;
+    // Both the main chain AND each individual head travel at the wave's
+    // own designated speed (manual: wave 2's lone head "travels at the
+    // slow rate" when that wave is slow) — `spec.speed` already encodes
+    // the full Table 4 alternation (wave 1 always fast, each composition
+    // played once slow then once fast, permanently fast past 40,000), so
+    // it must be the single source of truth here rather than re-deriving
+    // speed from the current score directly.
+    const chainSpeed = spec.speed === 'fast' ? CENTIPEDE_SPEED.FAST : CENTIPEDE_SPEED.SLOW;
     const centerCol = 15 + this.rng.int(0, 1);
 
     if (spec.chainLength > 0) {
       const dir = this.rng.chance(0.5) ? 1 : -1;
-      this.centipede.spawnChain(GRID.ROWS, centerCol, dir as 1 | -1, spec.chainLength, mainSpeed, -1);
+      this.centipede.spawnChain(GRID.ROWS, centerCol, dir as 1 | -1, spec.chainLength, chainSpeed, -1);
     }
 
     const usedCols = new Set<number>([centerCol]);
@@ -690,7 +707,7 @@ export class Game {
       while (usedCols.has(col) && guard++ < 60) col = this.rng.int(1, GRID.COLS);
       usedCols.add(col);
       const dir = this.rng.chance(0.5) ? 1 : -1;
-      this.centipede.spawnChain(GRID.ROWS, col, dir as 1 | -1, 1, CENTIPEDE_SPEED.FAST, -1);
+      this.centipede.spawnChain(GRID.ROWS, col, dir as 1 | -1, 1, chainSpeed, -1);
     }
 
     this.emit('waveStart');

@@ -6,13 +6,15 @@ import { GRID, SHOOTER } from '../config';
  * by the caller only creating a new Shot when the previous one is gone.
  */
 export class Shot {
-  col: number; // locked to an integer column at fire time
+  col: number; // locked to an integer column at fire time — used for all collision
   row: number; // fractional, travels upward
+  visualX: number; // the shooter's exact fractional x at fire time — rendering only
   alive = true;
 
-  constructor(col: number, row: number) {
+  constructor(col: number, row: number, visualX: number = col) {
     this.col = col;
     this.row = row;
+    this.visualX = visualX;
   }
 
   update(dt: number): { prevRow: number; newRow: number } {

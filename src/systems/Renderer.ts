@@ -299,7 +299,13 @@ export class Renderer {
   }
 
   private drawShot(shot: NonNullable<Game['shot']>): void {
-    const cx = Math.round(this.px(shot.col) + CELL / 2);
+    // Rendered at the shooter's exact fractional x from fire time
+    // (`visualX`), not the locked integer `col` used for collision — the
+    // shooter itself renders at a continuous position (trak-ball glide),
+    // so using the rounded column here would visually detach the bullet
+    // from the muzzle by up to half a cell whenever the shooter wasn't
+    // sitting exactly on a whole column when it fired.
+    const cx = Math.round(this.px(shot.visualX) + CELL / 2);
     const cy = Math.round(this.py(shot.row));
     this.rect(cx, cy - 3, 1, 6, COLORS.shot);
   }
