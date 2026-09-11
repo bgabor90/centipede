@@ -408,24 +408,42 @@ export class Renderer {
     this.centeredText(`BONUS EVERY ${game.options.extraLifeScore}`, CANVAS_W / 2, 188, COLORS.attractText);
   }
 
+  // Ports GetInitials ($2745-...): the real cabinet doesn't pop up a
+  // separate dialog for this -- it draws "GREAT SCORE" / "ENTER YOUR
+  // INITIALS" and edits the new entry directly inside the same
+  // high-score table drawn during attract mode, at whatever rank it
+  // actually earned, with the initial currently being typed blinking in
+  // place. Existing lower entries shift down and the table stays capped
+  // at 8 rows, exactly like `drawAttractOverlay`'s table.
   private drawHighScoreEntry(game: Game): void {
-    const ctx = this.ctx;
-    ctx.fillStyle = 'rgba(0,0,0,0.72)';
-    ctx.fillRect(20, 42, 200, 156);
-    this.centeredText('GREAT SCORE', CANVAS_W / 2, 58, COLORS.attractText);
-    this.centeredText('ENTER YOUR INITIALS', CANVAS_W / 2, 78, COLORS.attractText);
-    this.centeredText(pad(game.getPendingInitialScore(), 6), CANVAS_W / 2, 98, '#ffffff');
+    const pendingScore = game.getPendingInitialScore();
+    const pendingInitials = game.initials.join('');
+    const existing = game.highScores;
+    let insertAt = existing.findIndex((e) => pendingScore > e.score);
+    if (insertAt === -1) insertAt = existing.length;
 
-    const initials = game.initials.join('');
-    const scale = 2;
-    const x = CANVAS_W / 2 - measureText(initials, scale, 2) / 2;
-    drawBitmapText(ctx, initials, x, 126, COLORS.attractText, scale, 2);
-    if ((this.frame >> 4) % 2 === 0) {
-      this.rect(x + game.initialIndex * (GLYPH_W * scale + 2 * scale), 143, GLYPH_W * scale, 2, '#ffffff');
-    }
+    const rows: Array<{ score: number; initials: string; pending: boolean }> = [
+      ...existing.slice(0, insertAt).map((e) => ({ ...e, pending: false })),
+      { score: pendingScore, initials: pendingInitials, pending: true },
+      ...existing.slice(insertAt).map((e) => ({ ...e, pending: false })),
+    ].slice(0, 8);
 
-    this.centeredText('LEFT RIGHT CHANGE', CANVAS_W / 2, 166, '#fff');
-    this.centeredText('FIRE ENTER SELECT', CANVAS_W / 2, 178, '#fff');
+    this.centeredText('HIGH SCORES', CANVAS_W / 2, 10, COLORS.attractText);
+    rows.forEach((entry, i) => {
+      const row = `${pad(entry.score, 6)}  ${entry.initials}`;
+      const y = 20 + i * 9;
+      const rowX = CANVAS_W / 2 - measureText(row) / 2;
+      drawBitmapText(this.ctx, row, rowX, y, COLORS.attractText);
+      if (entry.pending && (this.frame >> 4) % 2 === 0) {
+        // Blink the initial currently being typed, in place, rather than
+        // drawing a separate standalone editor with its own cursor.
+        const cursorX = rowX + (6 + 2 + game.initialIndex) * GLYPH_W;
+        this.rect(cursorX, y + GLYPH_W, GLYPH_W, 1, '#ffffff');
+      }
+    });
+
+    this.centeredText('GREAT SCORE', CANVAS_W / 2, 176, COLORS.attractText);
+    this.centeredText('ENTER YOUR INITIALS', CANVAS_W / 2, 188, COLORS.attractText);
   }
 
   drawPausedBanner(): void {

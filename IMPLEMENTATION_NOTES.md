@@ -324,6 +324,22 @@ persistent game object -- that combination was confirmed as a test-
 harness artifact, not a collision bug, when a stray wave-clear mid-trial
 populated a fresh centipede that intercepted the shot first).
 
+## High-score initials entry: in-table, not a popup dialog
+
+`GetInitials`'s own drawing code targets an output pointer built from
+`plyr_hs_init_slot` -- an offset directly into the on-screen high-score
+table's tile memory -- rather than a separate screen area. The real
+cabinet doesn't show a standalone "enter your initials" dialog box: it
+draws "GREAT SCORE" / "ENTER YOUR INITIALS" and edits the new entry
+directly inside the same ranked high-score table shown during attract
+mode, at whatever rank the score actually earned, with the initial
+currently being typed blinking in place while existing lower entries
+shift down. `drawHighScoreEntry()` previously rendered a separate dark
+popup box with the pending score shown alone (not in ranked context) and
+a large standalone initials editor below it. Rewritten to merge the
+pending entry into the real table (capped at 8 rows, matching
+`drawAttractOverlay`) and blink the in-progress initial in place.
+
 ## Explicitly approximated (flagged, not verified anywhere)
 
 - Named RGB hex values for each DBGR color (the source names colors, e.g.
