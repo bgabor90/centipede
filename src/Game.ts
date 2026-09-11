@@ -464,7 +464,7 @@ export class Game {
         return;
       }
 
-      const segHit = this.centipede.findSegmentNear(r, col, 0.6);
+      const segHit = this.centipede.findSegmentNear(r, col);
       if (segHit) {
         const result = this.centipede.destroySegment(segHit.chain, segHit.index, this.mushrooms);
         this.addScore(result.points);
@@ -474,23 +474,29 @@ export class Game {
         return;
       }
 
-      // Distance-tolerance checks (matching the centipede's own 0.6-cell
-      // hit radius above) instead of exact-rounded-position equality --
-      // the latter could let a fast-moving target's true position fall
-      // between two swept rows/columns and never register a hit at all.
-      if (this.flea && Math.abs(this.flea.y - r) <= 0.6 && this.flea.col === col) {
-        const killed = this.flea.registerHit();
-        this.emit(killed ? 'fleaKilled' : 'fleaHit');
-        if (killed) {
-          this.addScore(SCORING.FLEA);
-          this.spawnKillFlash(this.flea.row, this.flea.col);
-          this.flea = null;
+      // VERIFIED (ChkMobjColl, $2f5e-$300e): distance-tolerance checks
+      // (not exact-rounded-position equality, which could let a
+      // fast-moving target's true position fall between two swept rows/
+      // columns and never register a hit). Real per-axis thresholds:
+      // vertical <5 raw units (0.625 cells), or <7 (0.875) for a flea
+      // already hit once ("fast"); horizontal <6 (0.75) for the flea,
+      // <10 (1.25) for the spider/scorpion.
+      if (this.flea) {
+        const fleaVertTolerance = this.flea.speed === FLEA.HIT_ESCALATED_SPEED ? 7 / 8 : 5 / 8;
+        if (Math.abs(this.flea.y - r) < fleaVertTolerance && this.flea.col === col) {
+          const killed = this.flea.registerHit();
+          this.emit(killed ? 'fleaKilled' : 'fleaHit');
+          if (killed) {
+            this.addScore(SCORING.FLEA);
+            this.spawnKillFlash(this.flea.row, this.flea.col);
+            this.flea = null;
+          }
+          this.shot = null;
+          return;
         }
-        this.shot = null;
-        return;
       }
 
-      if (this.scorpion && this.scorpion.row === r && Math.abs(this.scorpion.x - col) <= 0.6) {
+      if (this.scorpion && this.scorpion.row === r && Math.abs(this.scorpion.x - col) < 10 / 8) {
         this.addScore(SCORING.SCORPION);
         this.emit('scorpionHit', SCORING.SCORPION);
         this.spawnKillFlash(this.scorpion.row, this.scorpion.col);
@@ -499,7 +505,7 @@ export class Game {
         return;
       }
 
-      if (this.spider && Math.abs(this.spider.y - r) <= 0.6 && Math.abs(this.spider.x - col) <= 0.6) {
+      if (this.spider && Math.abs(this.spider.y - r) < 5 / 8 && Math.abs(this.spider.x - col) < 10 / 8) {
         // VERIFIED: the ROM's spider-kill scoring compares vertical
         // distance only (mobj_vert_spdr - mobj_vert_plyr) -- horizontal
         // offset isn't part of the calculation.

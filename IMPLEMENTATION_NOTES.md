@@ -303,6 +303,27 @@ no documented equivalent display). Verified directly: text and score
 match ("900" for a close kill), popup appears after the flash delay and
 clears after its own duration.
 
+## Precise shot-vs-target hit thresholds
+
+`ChkMobjColl` ($2f5e-$300e) shows the real shot-vs-target hit test isn't
+a single symmetric radius per type -- it's two independent per-axis
+checks, verified precisely: vertical distance <5 raw units (0.625 cells)
+for everything, except a flea already hit once ("fast") gets a wider
+<7 (0.875) to compensate for its much higher fall speed; horizontal
+distance <6 (0.75) for the centipede/flea, <10 (1.25) for the
+spider/scorpion. A prior pass (fixing visible spider tunneling) had
+already moved off exact-position equality but used a flat 0.6-cell
+tolerance for every type/axis -- notably narrower than the real spider/
+scorpion horizontal window (1.25) and the fast-flea vertical window
+(0.875). Replaced with the exact verified per-axis/per-type values in
+`Centipede.findSegmentNear()` and the flea/scorpion/spider checks in
+`updateShot()`. Verified with the same true-continuous-distance
+simulation methodology as the original tunneling fix (isolated per-type
+runs, not chained after hundreds of unrelated trials in the same
+persistent game object -- that combination was confirmed as a test-
+harness artifact, not a collision bug, when a stray wave-clear mid-trial
+populated a fresh centipede that intercepted the shot first).
+
 ## Explicitly approximated (flagged, not verified anywhere)
 
 - Named RGB hex values for each DBGR color (the source names colors, e.g.

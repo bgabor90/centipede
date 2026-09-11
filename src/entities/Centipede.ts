@@ -286,11 +286,15 @@ export class CentipedeManager {
   }
 
   /** Finds the frontmost (by render order) segment occupying a cell, for shot collision. */
-  findSegmentNear(row: number, col: number, tolerance = 0.55): { chain: Chain; index: number } | null {
+  // VERIFIED (ChkMobjColl, $2f5e-$300e): the real shot-vs-target hit test
+  // is two independent per-axis thresholds, not a single symmetric
+  // radius -- vertical distance <5 raw units (0.625 cells), horizontal
+  // <6 (0.75 cells) for a centipede segment specifically.
+  findSegmentNear(row: number, col: number, rowTolerance = 5 / 8, colTolerance = 6 / 8): { chain: Chain; index: number } | null {
     for (const chain of this.chains) {
       const views = chain.getSegmentViews();
       for (const v of views) {
-        if (Math.abs(v.col - col) <= tolerance && Math.abs(v.row - row) <= tolerance) {
+        if (Math.abs(v.col - col) < colTolerance && Math.abs(v.row - row) < rowTolerance) {
           return { chain, index: v.index };
         }
       }
