@@ -196,11 +196,46 @@ guide:
   and the attack-wave composition/speed-alternation table.
 - Side-feed timing decay curve.
 
+## Attract mode: continuous demo, not exclusive phases
+
+The attract loop originally cycled through exclusive TITLE / DEMO /
+HIGH_SCORES phases (a title card, then blacked-out demo gameplay, then a
+high-score table). That's been replaced with the real cabinet's actual
+behavior: the high-score table, coin/credit line, and bonus-life reminder
+are shown continuously, together, layered over a demo that never stops or
+blacks out (`AttractPhase`/`attractPhase`/`ATTRACT_PHASE_SECONDS` removed
+from `Game.ts`; `drawTitleCard`/`drawHighScoreTable`/`drawAttract` removed
+from `Renderer.ts` in favor of a single `drawAttractOverlay`). The demo
+gun can now die mid-loop too (`ChkPlyrColl` runs unconditionally from the
+centipede/spider/flea update routines regardless of `attract_mode`) — on a
+hit, a ~0.8s pause (`ExplodePlayer`'s `delay_ctr`) then a fresh centipede/
+spider/flea respawn, score and the mushroom field untouched, so the same
+deterministic run just continues (`attractRespawnTimer`). The initial
+mushroom scatter for this mode was also switched from a fixed checkerboard
+formula to the same verified `InitPlay` algorithm used for real games
+(see the scatter entry above).
+
+Follow-up adjustments after user feedback on the resulting visuals:
+- The overlay text render order was moved to *after* the board elements
+  (mushrooms/centipede/spider/shot), not before — UI text now draws on
+  top of the live demo board rather than getting drawn over by it.
+- Per-row rank numbers were dropped from the high-score list ("1  012000
+  EJD" -> "012000  EJD"), and the "CLICK OR PRESS FIRE TO START" /
+  "MOUSE / TOUCH = TRAK-BALL" lines were removed entirely, matching a
+  user-supplied reference screenshot that shows only HIGH SCORES, the
+  score/initials rows, 1 COIN 1 PLAY, and BONUS EVERY <n>.
+- The dimming backdrop added behind the overlay text (for legibility
+  against the busy live board) was removed per request; the text's own
+  color contrast against the board carries readability instead, matching
+  that same reference.
+- The "FAN-MADE - NOT AN ATARI PRODUCT" footer disclaimer (`drawFooter`)
+  was removed per request. It existed specifically because we
+  deliberately don't display the real "©1980 ATARI" text that occupies
+  that screen row on the original hardware — **the game currently shows
+  no disclaimer of any kind**, which is worth knowing if that mattered.
+
 ## Explicitly approximated (flagged, not verified anywhere)
 
-- Centipede horizontal movement speed in absolute px/frame (two discrete
-  tiers are confirmed to exist; the numeric value wasn't in the fetched
-  excerpt — tuned by feel instead).
 - POKEY channel-to-sound-effect mapping is transcribed from the reference
   pack, not independently re-confirmed against the disassembly text by
   this session; flea's channel isn't documented anywhere found, so it's

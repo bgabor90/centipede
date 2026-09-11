@@ -32,7 +32,10 @@ Goal: make the game read like an 1981 arcade cabinet while keeping this codebase
   - Mushroom rim uses `palette.eyes`.
   - Shooter/legs/eyes use `palette` values in `Renderer.ts`.
 - Keep poison treatment:
-  - Poisoned mushroom uses `capPoison` now (`COLORS.capPoison`).
+  - Poisoned mushroom cells swap the rim role from `palette.eyes` to
+    `palette.legs` (see the `D:` color passed to `drawTileMask` in
+    `Renderer.ts`'s `drawMushrooms()`) — there's no separate `capPoison`
+    color constant.
   - Avoid silently re-tinting poison states unless your new art also encodes that state.
 
 ## Sprite geometry and orientation
@@ -51,7 +54,8 @@ Goal: make the game read like an 1981 arcade cabinet while keeping this codebase
 ## Mushroom appearance (high-priority visual difference)
 
 The current implementation already supports 2-tone mushroom rendering:
-- `F`, `R`, `S` in `MUSHROOM_STAGES` = fill, rim/detail, stem.
+- `F`, `D` in `MUSHROOM_STAGES` / `POISONED_MUSHROOM_STAGES` = fill,
+  rim/detail (there is no separate stem letter).
 - In arcade-like mode, prefer:
   - warm/orange fill on untouched mushrooms
   - green/richer rim/shadow
@@ -60,16 +64,28 @@ The current implementation already supports 2-tone mushroom rendering:
 
 ## Attract-mode and HUD style (high-variance area)
 
-Arcade references suggest:
-- More uniform top-banner text color on score/high-score screens.
-- “HIGH SCORES” block should be central, rank + score + initials dense and readable.
-- Footer row should still exist and carry a visible credit line.
+Attract mode runs the game continuously (no exclusive title/demo/table
+phases) with the high-score table, coin/credit line, and bonus-life
+reminder drawn on top of the live board every frame — see
+`drawAttractOverlay()` in `Renderer.ts` (called *after* the board-element
+draws, so UI text always wins over mushrooms/centipede/etc., not the
+other way around). There is currently no dimming backdrop behind that
+text and no footer/credit line anywhere on screen (both were removed at
+the project owner's request) — the text's own color contrast against the
+board is what keeps it readable. Don't reintroduce either without
+checking first; a prior pass added both and they were explicitly asked to
+be taken back out.
 
 Current behavior lives in `Renderer.ts`:
-- `drawHeader()`, `drawTitleCard()`, `drawHighScoreTable()`, `drawFooter()`.
-- Suggested first pass:
+- `drawHeader()`, `drawAttractOverlay()`.
+- Score/initials rows show no rank number (`012000  EJD`, not
+  `1  012000  EJD`), and there is no "CLICK OR PRESS FIRE" / "MOUSE =
+  TRAK-BALL" text on this screen — a user-supplied reference showed only
+  HIGH SCORES, the score/initials rows, 1 COIN 1 PLAY, and BONUS EVERY
+  `<n>`.
+- Suggested first pass for any further work:
   1. Keep font family as pixel glyph path (`BitmapFont.ts`) rather than canvas text.
-  2. Set attract/high-score text to one warm/consistent palette color.
+  2. Keep attract/high-score text on one warm/consistent palette color.
   3. Keep border/box artifacts minimal; preserve scanline style instead.
 - Keep score glyph proportions at 5x7.
 
@@ -129,6 +145,7 @@ setCustomSpriteSheet(
 - [ ] Enemy/sprite proportions stay in `16x8` motion-object band.
 - [ ] Per-wave palette visibly shifts in arcade-like rhythm.
 - [ ] Mushrooms show cap + rim contrast.
-- [ ] Attract/high-score text is legible and color-consistent.
-- [ ] Footer line remains visible and stable.
+- [ ] Attract/high-score text is legible (on its own contrast — no
+      dimming backdrop by design) and color-consistent, and draws on top
+      of the board, not underneath it.
 - [ ] Optional: custom sheet path works in all game states with fallbacks.

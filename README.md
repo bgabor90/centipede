@@ -34,10 +34,13 @@ static server) — there's no server-side component.
 
 Touch works too (drag to move, tap-and-hold to fire) for tablets.
 
-When the game is idle, it loops through a cabinet-style attract sequence:
-title, scripted demo gameplay, and an eight-entry high-score table. If your
-final score qualifies, the game switches into initials entry; use left/right
-or up/down to change the current letter and Fire/Enter to accept each one.
+When the game is idle, it runs a continuous attract demo — the same
+gameplay simulation running unattended, with the eight-entry high-score
+table, coin/credit line, and bonus-life reminder shown on top of it the
+whole time (no separate title card or exclusive high-score screen; that
+matches how the original cabinet actually layers this). If your final
+score qualifies, the game switches into initials entry; use left/right or
+up/down to change the current letter and Fire/Enter to accept each one.
 
 ## Architecture
 
@@ -140,14 +143,11 @@ port of the original ROM:
 
 - **High score persistence** is browser `localStorage`, not cabinet EAROM,
   but the visible table keeps the original-style eight score/initial rows.
-- **Spider movement** follows the manual's description (diagonal slashes,
-  vertical bounce "holding patterns," never reversing net direction,
-  deflecting off the centipede) via a randomized state machine — it's a
-  faithful approximation of the behavior, not a port of the original's exact
-  pseudo-random sequence (which isn't published anywhere).
-- **Centipede speed** follows the disassembly notes: the main chain moves
-  at 1 px/frame until 40,000 points, then 2 px/frame; independent heads,
-  including split-off chains created by shooting a body segment, move at
-  2 px/frame.
+- **Timing/behavior fidelity**: a large pass of gameplay rules (centipede,
+  spider, flea, scorpion, collision detection, wave transitions, attract
+  mode) has been cross-checked directly against a disassembly of the
+  original ROM rather than just the manual — see `IMPLEMENTATION_NOTES.md`
+  for the full, cited list of what's verified, what's a corroborated guide
+  value, and what's still an acknowledged approximation.
 - Art and sound are original work matching the manual's descriptions of each
   character, not extracted ROM graphics/samples.
