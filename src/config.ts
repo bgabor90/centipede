@@ -153,10 +153,18 @@ export const SPIDER = {
   SPEEDUP_SCORE_EASY: 5_000,
   SPEEDUP_SCORE_HARD: 1_000,
   RESPAWN_AFTER_KILL_MS: 4_000,
-  // VERIFIED (6502disassembly.com): source comment reads "check again in
-  // 48 frames (~3/4 sec)" for the post-escape recheck (60fps -> 800ms).
-  // The kill-cooldown above stays at the Video Master's Guide's clearer
-  // "about 4 seconds".
+  // A prior pass here cited "check again in 48 frames (~3/4 sec)" for the
+  // spider's post-escape respawn -- that 48-frame constant turned out
+  // (reading MoveSpider's :Offscreen, $22f6-$22f9, directly) to be
+  // something else entirely: the unrelated steady-state direction-
+  // redecision cadence, already correctly used elsewhere as
+  // SPIDER.DIRECTION_CHECK_FRAMES. :Offscreen actually jumps straight to
+  // InitSpider with no delay at all -- Game.ts's natural on-screen-exit
+  // path now spawns immediately instead of arming this timer. This value
+  // remains in use only for the unrelated "player just respawned after a
+  // death" spider-cooldown reuse, which hasn't been independently
+  // verified against the ROM and is kept as the Video Master's Guide had
+  // it.
   RESPAWN_AFTER_ESCAPE_MS: 800,
   // VERIFIED (MoveSpider's :ScoreAdj, $22b0-$22ce in the Rev4
   // disassembly): the max row is 12 minus an adjustment computed from the

@@ -704,6 +704,26 @@ frame's `dt`. 1 raw pixel per active-gated frame call, 60fps, 8px/cell
 with a comment noting the exact cadence "can't be reproduced exactly" --
 it can; the excerpt just hadn't been read in full yet.
 
+## Spider respawns immediately after exiting the screen, not after 0.8s
+
+Found via a headless simulation harness (driving `Game` directly for
+tens of thousands of frames with scripted/randomized input, watching for
+invariant violations) built for this pass -- worth keeping in mind as a
+technique, separate from static disassembly reading. `MoveSpider`'s
+`:Offscreen` ($22f6-$22f9 in the Rev4 disassembly) jumps straight to
+`InitSpider` the instant the spider exits horizontally -- a full,
+immediate reinitialization, no delay. The existing `RESPAWN_AFTER_
+ESCAPE_MS` (800ms) armed here came from a prior citation of "check again
+in 48 frames (~3/4 sec)," which turns out to be a different constant
+entirely (the unrelated steady-state direction-redecision cadence,
+already correctly used elsewhere as `SPIDER.DIRECTION_CHECK_FRAMES`)
+misattributed to this spot. `updateSpider()`'s natural on-screen-exit
+path now calls a new `spawnSpider()` helper immediately instead of
+arming that timer; the constant itself is untouched and stays in use for
+the unrelated "spider cooldown after the player respawns from a death"
+reuse elsewhere, which hasn't been independently verified and is kept as
+the guide had it.
+
 ## Explicitly approximated (flagged, not verified anywhere)
 
 - Named RGB hex values for each DBGR color (the source names colors, e.g.

@@ -642,6 +642,14 @@ export class Game {
   // Spider
   // ---------------------------------------------------------------------
 
+  private spawnSpider(): void {
+    const speedupScore = this.options.spiderSpeedupScore;
+    const speed = this.score >= speedupScore ? SPIDER.SPEED_FAST : SPIDER.SPEED_SLOW;
+    const hardDifficulty = this.options.spiderSpeedupScore === SPIDER.SPEEDUP_SCORE_HARD;
+    this.spider = new Spider(this.rng.chance(0.5), speed, this.rng, hardDifficulty);
+    this.emit('spiderSpawn');
+  }
+
   private updateSpider(dt: number): void {
     if (this.spider) {
       this.spider.update(dt, {
@@ -651,19 +659,20 @@ export class Game {
       });
       if (!this.spider.alive) {
         this.emit('spiderEscaped');
-        this.spider = null;
-        this.spiderTimer = SPIDER.RESPAWN_AFTER_ESCAPE_MS / 1000;
+        // VERIFIED (MoveSpider's :Offscreen, $22f6-$22f9 in the Rev4
+        // disassembly): exiting the screen horizontally jumps straight to
+        // InitSpider -- a full, immediate reinitialization, not a delayed
+        // recheck. A prior pass's "48 frames (~3/4 sec)" citation for this
+        // was a different constant (the unrelated steady-state direction-
+        // redecision cadence, already correctly used as
+        // SPIDER.DIRECTION_CHECK_FRAMES elsewhere) misattributed to this
+        // spot. Spawn immediately instead of arming spiderTimer.
+        this.spawnSpider();
       }
       return;
     }
     this.spiderTimer -= dt;
-    if (this.spiderTimer <= 0) {
-      const speedupScore = this.options.spiderSpeedupScore;
-      const speed = this.score >= speedupScore ? SPIDER.SPEED_FAST : SPIDER.SPEED_SLOW;
-      const hardDifficulty = this.options.spiderSpeedupScore === SPIDER.SPEEDUP_SCORE_HARD;
-      this.spider = new Spider(this.rng.chance(0.5), speed, this.rng, hardDifficulty);
-      this.emit('spiderSpawn');
-    }
+    if (this.spiderTimer <= 0) this.spawnSpider();
   }
 
   // ---------------------------------------------------------------------
