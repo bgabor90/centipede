@@ -888,9 +888,14 @@ export class Game {
   // keep running during this pause on real hardware. This previously
   // routed through a fully separate state that froze everything.
   private updatePlayerDeathAnimation(dt: number): void {
+    // Same MoveScorpion-before-MoveFlea order as MainLoop ($2049-$204c),
+    // already followed in updatePlaying/updateAttractDemo below -- flea
+    // and scorpion share one real motion-object slot, so whichever update
+    // runs first wins any single-frame tie on which of the two gets to
+    // spawn; this state had them reversed.
     this.updateSpider(dt);
-    this.updateFlea(dt);
     this.updateScorpion(dt);
+    this.updateFlea(dt);
 
     this.deathTimer -= dt;
     if (this.deathTimer > 0) return;
@@ -922,9 +927,11 @@ export class Game {
   // stays frozen through the whole tally; spider/flea/scorpion keep
   // running exactly as they do during normal play.
   private updateTally(dt: number): void {
+    // Same MoveScorpion-before-MoveFlea order as MainLoop; see the note
+    // in updatePlayerDeathAnimation above.
     this.updateSpider(dt);
-    this.updateFlea(dt);
     this.updateScorpion(dt);
+    this.updateFlea(dt);
 
     this.tallyTimer -= dt;
     if (this.tallyTimer > 0) return;

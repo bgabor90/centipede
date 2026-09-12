@@ -678,6 +678,19 @@ time"), with no gating -- 7px/frame * 60fps / 8px-per-cell = 52.5
 cells/sec. `SHOOTER.SHOT_SPEED` was an unsourced 46, about 12% slower
 than the real shot.
 
+## Scorpion-before-flea update order, consistently
+
+`MainLoop` ($2049-$204c) always calls `MoveScorpion` before `MoveFlea`,
+every frame -- already correctly followed in `updatePlaying`/
+`updateAttractDemo`, whose own comment documents why the order matters.
+`updatePlayerDeathAnimation`/`updateTally` had the two reversed. Since
+flea and scorpion share one real motion-object slot (mutually exclusive
+by construction on real hardware, modeled here as two separate,
+mutually-guarding fields), whichever update runs first wins any single
+frame where neither currently exists and both would otherwise become
+eligible to spawn -- these two states had that tie-break backwards
+relative to real hardware's fixed call order. Reordered to match.
+
 ## Explicitly approximated (flagged, not verified anywhere)
 
 - Named RGB hex values for each DBGR color (the source names colors, e.g.
