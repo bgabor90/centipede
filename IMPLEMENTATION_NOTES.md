@@ -669,6 +669,15 @@ formula and widened the zone back out at very high scores, the opposite
 of the intended curve. Replaced with a permanent `Infinity -> 7` past
 159,999.
 
+## Shot speed corrected to 52.5 cells/sec
+
+`UpdateShot`'s `:MoveShot` ($2f16-$2f23 in the Rev4 disassembly)
+unconditionally advances the shot's vertical position by a raw 7 pixels
+every single frame while in flight ("lda #$07 ;shot moves 7 pixels each
+time"), with no gating -- 7px/frame * 60fps / 8px-per-cell = 52.5
+cells/sec. `SHOOTER.SHOT_SPEED` was an unsourced 46, about 12% slower
+than the real shot.
+
 ## Explicitly approximated (flagged, not verified anywhere)
 
 - Named RGB hex values for each DBGR color (the source names colors, e.g.

@@ -253,7 +253,12 @@ export const SHOOTER = {
   START_ROW: 1,
   START_COL: 15, // center-ish of 30 columns (1-indexed)
   MOVE_SPEED: 40, // cells/second under keyboard control
-  SHOT_SPEED: 46, // cells/second, straight up
+  // VERIFIED (UpdateShot's :MoveShot, $2f16-$2f23 in the Rev4
+  // disassembly): the shot's vertical position is unconditionally
+  // advanced by a raw 7 pixels every single frame while in flight
+  // ("lda #$07 ;shot moves 7 pixels each time"), no gating -- 7px/frame
+  // * 60fps / 8px-per-cell = 52.5 cells/sec, not the previous unsourced 46.
+  SHOT_SPEED: 52.5, // cells/second, straight up
   // The disassembly's AttractMove ($2119) calls the same MovePlyrHorz/
   // MovePlayerVert routines used by real play, but the fetched excerpt
   // doesn't show their per-frame pixel step, so the original cadence can't
