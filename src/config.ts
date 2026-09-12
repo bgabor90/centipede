@@ -259,15 +259,15 @@ export const SHOOTER = {
   // ("lda #$07 ;shot moves 7 pixels each time"), no gating -- 7px/frame
   // * 60fps / 8px-per-cell = 52.5 cells/sec, not the previous unsourced 46.
   SHOT_SPEED: 52.5, // cells/second, straight up
-  // The disassembly's AttractMove ($2119) calls the same MovePlyrHorz/
-  // MovePlayerVert routines used by real play, but the fetched excerpt
-  // doesn't show their per-frame pixel step, so the original cadence can't
-  // be reproduced exactly. MOVE_SPEED (tuned for responsive keyboard input)
-  // is far too fast for the vertical shooter zone's 5-row span -- it
-  // bounced top-to-bottom several times a second, reading as frantic
-  // vibration rather than the leisurely bob/drift seen in real attract
-  // footage. This is a tuned approximation of that calmer pace.
-  ATTRACT_MOVE_SPEED: 8, // cells/second, demo-mode bounce movement only
+  // VERIFIED (AttractMove, $215d-$217a in the Rev4 disassembly, read in
+  // full): the demo gun's own call into MovePlyrHorz/MovePlayerVert always
+  // passes exactly +-1 (raw pixel) as the distance argument -- the *only*
+  // gating is the caller's own bit-7 "active half of the cycle" check
+  // (already modeled separately, via attractFrame, as the condition under
+  // which this speed is even applied for that frame's dt). 1 raw pixel
+  // per active-gated frame call, 60fps, 8px/cell -> 7.5 cells/sec exactly
+  // -- not a tuned guess, and not the previous 8.
+  ATTRACT_MOVE_SPEED: 7.5, // cells/second, demo-mode bounce movement only
 } as const;
 
 export const AUDIO = {

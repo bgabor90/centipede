@@ -691,6 +691,19 @@ frame where neither currently exists and both would otherwise become
 eligible to spawn -- these two states had that tie-break backwards
 relative to real hardware's fixed call order. Reordered to match.
 
+## Attract-mode demo speed corrected to 7.5 cells/sec (no longer a tuned guess)
+
+`AttractMove` ($215d-$217a in the Rev4 disassembly, read in full this
+time): the demo gun's own calls into `MovePlyrHorz`/`MovePlayerVert`
+always pass exactly +-1 (one raw pixel) as the distance to move -- the
+only gating is the caller's own "active half of the 256-frame cycle"
+check, which `updateAttractDemo()` already models separately via
+`attractFrame`'s bit-7 test before it ever applies this speed for that
+frame's `dt`. 1 raw pixel per active-gated frame call, 60fps, 8px/cell
+-> 7.5 cells/sec exactly. `SHOOTER.ATTRACT_MOVE_SPEED` was a tuned 8,
+with a comment noting the exact cadence "can't be reproduced exactly" --
+it can; the excerpt just hadn't been read in full yet.
+
 ## Explicitly approximated (flagged, not verified anywhere)
 
 - Named RGB hex values for each DBGR color (the source names colors, e.g.
