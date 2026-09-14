@@ -6,6 +6,7 @@ import { GLYPH_W, drawBitmapText, measureText } from './BitmapFont';
 import { getWavePalette } from './Palette';
 import {
   BOMB_FRAMES,
+  BOMB_MASK,
   CENTIPEDE_BODY_FRAMES,
   CENTIPEDE_HEAD_FRAMES,
   FLEA_FRAMES,
@@ -451,9 +452,16 @@ export class Renderer {
     ctx.restore();
   }
 
-  private drawBombHud(game: Game): void {
-    const str = `B${Math.max(0, game.bombsRemaining)}`;
-    this.text(str, CANVAS_W - measureText(str) - 4, 0, COLORS.bomb);
+  // Same convention as the header's lives readout (drawHeader): the real
+  // sprite/colors instead of a generic glyph, so the reminder that bombs
+  // are in play reads as an actual bomb icon rather than a "B3" label. No
+  // count is drawn here -- just the icon, top-right of the header row.
+  private drawBombHud(_game: Game): void {
+    renderMask(this.putPixel, BOMB_MASK, CANVAS_W - 8, 4, {
+      F: COLORS.bombBody,
+      D: COLORS.bombCore,
+      H: COLORS.bombHighlight,
+    });
   }
 
   private drawShooter(shooter: Game['shooter'], _color: string): void {
