@@ -453,15 +453,19 @@ export class Renderer {
   }
 
   // Same convention as the header's lives readout (drawHeader): the real
-  // sprite/colors instead of a generic glyph, so the reminder that bombs
-  // are in play reads as an actual bomb icon rather than a "B3" label. No
-  // count is drawn here -- just the icon, top-right of the header row.
-  private drawBombHud(_game: Game): void {
-    renderMask(this.putPixel, BOMB_MASK, CANVAS_W - 8, 4, {
-      F: COLORS.bombBody,
-      D: COLORS.bombCore,
-      H: COLORS.bombHighlight,
-    });
+  // sprite/colors instead of a generic glyph, and one icon per remaining
+  // bomb (not a "B3" text count) -- same idea as lives showing one ship
+  // per life left. Grows leftward from the right edge of the header row
+  // so the rightmost icon is always the next one spent.
+  private drawBombHud(game: Game): void {
+    const count = Math.max(0, game.bombsRemaining);
+    for (let i = 0; i < count; i++) {
+      renderMask(this.putPixel, BOMB_MASK, CANVAS_W - 8 - i * 7, 4, {
+        F: COLORS.bombBody,
+        D: COLORS.bombCore,
+        H: COLORS.bombHighlight,
+      });
+    }
   }
 
   private drawShooter(shooter: Game['shooter'], _color: string): void {
