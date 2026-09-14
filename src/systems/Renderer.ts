@@ -5,11 +5,12 @@ import type { FeatureFlags } from '../config';
 import { GLYPH_W, drawBitmapText, measureText } from './BitmapFont';
 import { getWavePalette } from './Palette';
 import {
-  BOMB_FRAMES,
   BOMB_MASK,
+  BOMB_SPORE_FRAMES,
   CENTIPEDE_BODY_FRAMES,
   CENTIPEDE_HEAD_FRAMES,
   FLEA_FRAMES,
+  MASK_W,
   MUSHROOM_STAGES,
   POISONED_MUSHROOM_STAGES,
   SCORPION_FRAMES,
@@ -60,6 +61,8 @@ const COLORS = {
   bombBody: '#a64bff',
   bombCore: '#ea3323',
   bombHighlight: '#fffdc8',
+  bombSpike: '#fffbc0',
+  bombSpore: '#c9ff3d',
   shot: '#ff3333',
   bomb: '#ffaa00',
   bombBlast: '#ffcc44',
@@ -421,19 +424,20 @@ export class Renderer {
     this.rect(cx, cy - 3, 1, 6, COLORS.shot);
   }
 
-  // FEATURES.bombs: the poison-sac sprite, so the in-flight bomb reads
+  // FEATURES.bombs: the Spore Cloud Sac sprite, so the in-flight bomb reads
   // distinctly from the shot's thin line. Rendered at the same fractional
   // muzzle x as the shot for the same anti-detachment reason (see
-  // drawShot). The mask is half-size (see BOMB_FRAMES), so its two frames
-  // just blink the highlight for a subtle pulse rather than animating a
-  // drift.
+  // drawShot). The mask's own two-frame cycle drifts the spore particles
+  // in/out; the sac body itself doesn't otherwise animate.
   private drawBomb(bomb: NonNullable<Game['bomb']>): void {
     const cx = Math.round(this.px(bomb.visualX) + CELL / 2);
     const cy = Math.round(this.py(bomb.row));
-    renderMask(this.putPixel, pickMaskFrame(BOMB_FRAMES, this.frame, 8), cx, cy, {
+    renderMask(this.putPixel, pickMaskFrame(BOMB_SPORE_FRAMES, this.frame, 8), cx, cy, {
       F: COLORS.bombBody,
       D: COLORS.bombCore,
       H: COLORS.bombHighlight,
+      L: COLORS.bombSpike,
+      S: COLORS.bombSpore,
     });
   }
 
@@ -456,14 +460,20 @@ export class Renderer {
   // sprite/colors instead of a generic glyph, and one icon per remaining
   // bomb (not a "B3" text count) -- same idea as lives showing one ship
   // per life left. Grows leftward from the right edge of the header row
-  // so the rightmost icon is always the next one spent.
+  // so the rightmost icon is always the next one spent. Unlike the lives
+  // readout's SHOOTER_MASK (~7px of visible content in a 16px mask, so an
+  // 8px pitch nearly touches without overlapping), BOMB_MASK's spore dots
+  // spread across nearly the full mask width -- so this needs a full
+  // MASK_W pitch instead of a tight one to keep icons from overlapping.
   private drawBombHud(game: Game): void {
     const count = Math.max(0, game.bombsRemaining);
     for (let i = 0; i < count; i++) {
-      renderMask(this.putPixel, BOMB_MASK, CANVAS_W - 8 - i * 7, 4, {
+      renderMask(this.putPixel, BOMB_MASK, CANVAS_W - 8 - i * MASK_W, 4, {
         F: COLORS.bombBody,
         D: COLORS.bombCore,
         H: COLORS.bombHighlight,
+        L: COLORS.bombSpike,
+        S: COLORS.bombSpore,
       });
     }
   }

@@ -662,42 +662,39 @@ export const SCORPION_EXPLOSION_FRAMES: Mask[] = [
 ];
 
 /**
- * Bomb power-up: a small poisoned sac, half the linear size (so a quarter
- * the area) of the other 16x8 motion objects. The content is centered in
- * an otherwise-transparent 16x8 mask rather than shrinking `MASK_W`/
- * `MASK_H` themselves, since those constants are shared by every other
- * sprite in this file — padding keeps this one centered on the same
- * `renderMask` call every other sprite uses.
- *
- * At this size there's no room left for the original design's floating
- * spore particles or spike tips, so the two frames instead just blink the
- * `H` highlight on and off for a subtle pulse. `F` is the poison body, `D`
- * is the red core detail, `H` is the cream highlight.
+ * Bomb power-up: a poisoned egg-sac shape (green/poison body, red core,
+ * cream highlight, pale spike tips) with loose toxic spore particles
+ * drifting just outside the main silhouette. `F` is the poison body, `D`
+ * is the red core detail, `H` is the cream highlight, `L` is a pale spike
+ * tip, and `S` is a drifting spore particle. The two frames only move the
+ * `S` spores in/out — the sac body itself is static — so cycling them
+ * with `pickFrame` reads as spores drifting around a stationary bomb
+ * rather than the bomb itself animating.
  */
-export const BOMB_FRAMES: Mask[] = [
+export const BOMB_SPORE_FRAMES: Mask[] = [
   [
-    '................',
-    '................',
-    '......FFFF......',
-    '.....FDFFDF.....',
-    '.....FFFHFF.....',
-    '......FFFF......',
-    '................',
-    '................',
+    '..S....LL....S..',
+    '.....FFFFFF.....',
+    '...S.FDFFFDFF.S.',
+    '....FFDFDFFF....',
+    '....FFFFFFFF....',
+    '.....FHFHFF.....',
+    '..S...FFFF...S..',
+    '.......LL.......',
   ],
   [
-    '................',
-    '................',
-    '......FFFF......',
-    '.....FDFFDF.....',
+    '.S.....LL.....S.',
     '.....FFFFFF.....',
-    '......FFFF......',
-    '................',
-    '................',
+    '..S..FDFFFDFF..S',
+    '....FFDFDFFF....',
+    '....FFFFFFFF....',
+    '.....FHFHFF.....',
+    '.S....FFFF....S.',
+    '.......LL.......',
   ],
 ];
 
-export const BOMB_MASK: Mask = BOMB_FRAMES[0];
+export const BOMB_MASK: Mask = BOMB_SPORE_FRAMES[0];
 
 export const MASK_W = 16;
 export const MASK_H = 8;
