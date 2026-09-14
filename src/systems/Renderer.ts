@@ -5,6 +5,7 @@ import type { FeatureFlags } from '../config';
 import { GLYPH_W, drawBitmapText, measureText } from './BitmapFont';
 import { getWavePalette } from './Palette';
 import {
+  BOMB_SPORE_FRAMES,
   CENTIPEDE_BODY_FRAMES,
   CENTIPEDE_HEAD_FRAMES,
   FLEA_FRAMES,
@@ -421,14 +422,21 @@ export class Renderer {
     this.rect(cx, cy - 3, 1, 6, COLORS.shot);
   }
 
-  // FEATURES.bombs: a pulsing dot so it reads distinctly from the shot's
-  // thin line while it's in flight, rendered at the same fractional muzzle
-  // x as the shot for the same anti-detachment reason (see drawShot).
+  // FEATURES.bombs: the Spore Cloud Sac sprite, so the in-flight bomb reads
+  // distinctly from the shot's thin line. Rendered at the same fractional
+  // muzzle x as the shot for the same anti-detachment reason (see
+  // drawShot). The mask's own two-frame cycle drifts the spore particles
+  // in/out; the sac body itself doesn't otherwise animate.
   private drawBomb(bomb: NonNullable<Game['bomb']>): void {
     const cx = Math.round(this.px(bomb.visualX) + CELL / 2);
     const cy = Math.round(this.py(bomb.row));
-    const radius = (this.frame >> 2) % 2 === 0 ? 2 : 1;
-    this.drawDiamond(cx, cy, radius, COLORS.bomb);
+    renderMask(this.putPixel, pickMaskFrame(BOMB_SPORE_FRAMES, this.frame, 8), cx, cy, {
+      F: COLORS.bombBody,
+      D: COLORS.bombCore,
+      H: COLORS.bombHighlight,
+      L: COLORS.bombSpike,
+      S: COLORS.bombSpore,
+    });
   }
 
   private drawBombExplosion(explosion: NonNullable<Game['bombExplosion']>): void {
