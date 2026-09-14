@@ -89,6 +89,20 @@ export class InputSystem {
     return this.keys.has(key);
   }
 
+  /**
+   * Re-anchors the tracked pointer target to a position the game just set
+   * directly (new game / life respawn). Without this, the mouse-control
+   * branch below reports wherever the real cursor is still physically
+   * resting -- which, combined with `instantMove: true`, snaps the ship
+   * there in a single frame instead of holding at the reset position, i.e.
+   * an instant "warp" the moment the player next moves. Only takes effect
+   * until the next real mousemove, which naturally overrides it again.
+   */
+  syncPointerTo(col: number, row: number): void {
+    this.mouseCol = col;
+    this.mouseRow = row;
+  }
+
   consumePause(): boolean {
     return this.consumeKeyPress('p');
   }

@@ -144,8 +144,17 @@ function handleHighScoreEntryInput(): void {
 function step(dt: number): void {
   const inputState = input.computeInput(game.shooter.x, game.shooter.y);
   game.update(dt, inputState);
+  const events = game.drainEvents();
   audio.update(dt, game);
-  audio.handle(game.drainEvents(), game.state);
+  audio.handle(events, game.state);
+
+  // The game just placed the ship at a fixed reset position itself (new
+  // game / life respawn) -- re-anchor the mouse-control target there too,
+  // or the next frame would instantly snap it to wherever the cursor is
+  // still physically resting (see InputSystem.syncPointerTo).
+  if (events.some((e) => e.type === 'gameStart' || e.type === 'lifeRespawn')) {
+    input.syncPointerTo(game.shooter.x, game.shooter.y);
+  }
 }
 
 requestAnimationFrame(frame);

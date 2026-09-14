@@ -54,7 +54,8 @@ export type GameEventType =
   | 'sideFeedTrigger'
   | 'mushroomTallyTick'
   | 'gameOver'
-  | 'gameStart';
+  | 'gameStart'
+  | 'lifeRespawn';
 
 export interface GameEvent {
   type: GameEventType;
@@ -1155,6 +1156,7 @@ export class Game {
     }
 
     this.shooter.reset();
+    this.emit('lifeRespawn');
     this.spawnWave(this.currentWave); // repeats the same attack wave, per the manual
     this.spiderTimer = SPIDER.RESPAWN_AFTER_ESCAPE_MS / 1000;
     this.fleaAllowedTimer = 2;
