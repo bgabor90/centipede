@@ -5,7 +5,7 @@ import type { FeatureFlags } from '../config';
 import { GLYPH_W, drawBitmapText, measureText } from './BitmapFont';
 import { getWavePalette } from './Palette';
 import {
-  BOMB_SPORE_FRAMES,
+  BOMB_FRAMES,
   CENTIPEDE_BODY_FRAMES,
   CENTIPEDE_HEAD_FRAMES,
   FLEA_FRAMES,
@@ -59,8 +59,6 @@ const COLORS = {
   bombBody: '#a64bff',
   bombCore: '#ea3323',
   bombHighlight: '#fffdc8',
-  bombSpike: '#fffbc0',
-  bombSpore: '#c9ff3d',
   shot: '#ff3333',
   bomb: '#ffaa00',
   bombBlast: '#ffcc44',
@@ -422,20 +420,19 @@ export class Renderer {
     this.rect(cx, cy - 3, 1, 6, COLORS.shot);
   }
 
-  // FEATURES.bombs: the Spore Cloud Sac sprite, so the in-flight bomb reads
+  // FEATURES.bombs: the poison-sac sprite, so the in-flight bomb reads
   // distinctly from the shot's thin line. Rendered at the same fractional
   // muzzle x as the shot for the same anti-detachment reason (see
-  // drawShot). The mask's own two-frame cycle drifts the spore particles
-  // in/out; the sac body itself doesn't otherwise animate.
+  // drawShot). The mask is half-size (see BOMB_FRAMES), so its two frames
+  // just blink the highlight for a subtle pulse rather than animating a
+  // drift.
   private drawBomb(bomb: NonNullable<Game['bomb']>): void {
     const cx = Math.round(this.px(bomb.visualX) + CELL / 2);
     const cy = Math.round(this.py(bomb.row));
-    renderMask(this.putPixel, pickMaskFrame(BOMB_SPORE_FRAMES, this.frame, 8), cx, cy, {
+    renderMask(this.putPixel, pickMaskFrame(BOMB_FRAMES, this.frame, 8), cx, cy, {
       F: COLORS.bombBody,
       D: COLORS.bombCore,
       H: COLORS.bombHighlight,
-      L: COLORS.bombSpike,
-      S: COLORS.bombSpore,
     });
   }
 
