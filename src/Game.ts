@@ -640,16 +640,55 @@ export class Game {
     if (!this.bomb) return;
     const { prevRow, newRow } = this.bomb.update(dt, this.bombSpeed);
     if (!this.bomb.alive) {
+      // Reaching the top of the screen used to just despawn the bomb
+      // silently -- it should detonate there instead, same as running
+      // into a mushroom, rather than the player's stock being wasted with
+      // no payoff.
+      const col = this.bomb.col;
       this.bomb = null;
+      this.explodeBomb(GRID.ROWS, col);
       return;
     }
 
     const col = this.bomb.col;
+    // Sweep row-by-row exactly like updateShot, and check the same targets
+    // it does -- mushrooms, centipede segments, flea, scorpion, spider.
+    // This previously only checked mushrooms, so a bomb flying up an
+    // empty column would pass straight through any creature in its path
+    // without detonating.
     const startRow = Math.floor(prevRow);
     const endRow = Math.ceil(newRow);
     for (let r = startRow; r <= endRow; r++) {
       if (r < 1 || r > GRID.ROWS) continue;
+
       if (this.mushrooms.has(r, col)) {
+        this.explodeBomb(r, col);
+        this.bomb = null;
+        return;
+      }
+
+      if (this.centipede.findSegmentNear(r, col)) {
+        this.explodeBomb(r, col);
+        this.bomb = null;
+        return;
+      }
+
+      if (this.flea) {
+        const fleaVertTolerance = this.flea.speed === FLEA.HIT_ESCALATED_SPEED ? 7 / 8 : 5 / 8;
+        if (Math.abs(this.flea.y - r) < fleaVertTolerance && this.flea.col === col) {
+          this.explodeBomb(r, col);
+          this.bomb = null;
+          return;
+        }
+      }
+
+      if (this.scorpion && this.scorpion.row === r && Math.abs(this.scorpion.x - col) < 10 / 8) {
+        this.explodeBomb(r, col);
+        this.bomb = null;
+        return;
+      }
+
+      if (this.spider && Math.abs(this.spider.y - r) < 5 / 8 && Math.abs(this.spider.x - col) < 10 / 8) {
         this.explodeBomb(r, col);
         this.bomb = null;
         return;
