@@ -1,5 +1,5 @@
 import { GRID } from '../config';
-import { KILL_FLASH_SECONDS, type Game } from '../Game';
+import { BOMB_EXPLOSION_SECONDS, KILL_FLASH_SECONDS, type Game } from '../Game';
 import type { SegmentView } from '../entities/Centipede';
 import type { FeatureFlags } from '../config';
 import { GLYPH_W, drawBitmapText, measureText } from './BitmapFont';
@@ -53,6 +53,8 @@ const COLORS = {
   scorpionBody: '#fffdc8',
   scorpionPincer: '#ea3323',
   shot: '#ff3333',
+  bomb: '#ffaa00',
+  bombBlast: '#ffcc44',
   tallyFlash: '#ffffff',
   // Sampled from the reference sheet's explosion-burst row.
   explosionSpark: '#75fb4c',
@@ -103,6 +105,7 @@ export class Renderer {
     ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
 
     this.drawHeader(game, palette.eyes);
+    if (features.bombs) this.drawBombHud(game);
     if (features.showGrid) this.drawGrid();
 
     this.drawMushrooms(game, palette);
@@ -112,6 +115,8 @@ export class Renderer {
     if (game.flea) this.drawFlea(game.flea);
     if (game.scorpion) this.drawScorpion(game.scorpion);
     if (game.shot) this.drawShot(game.shot);
+    if (game.bomb) this.drawBomb(game.bomb);
+    if (game.bombExplosion) this.drawBombExplosion(game.bombExplosion);
     for (const flash of game.killFlashes) this.drawKillFlash(flash);
     if (game.spiderPointsPopup && game.spiderPointsPopup.delay <= 0) this.drawSpiderPointsPopup(game.spiderPointsPopup);
     if (game.state === 'PLAYER_DEATH_ANIMATION') {
@@ -406,6 +411,36 @@ export class Renderer {
     const cx = Math.round(this.px(shot.visualX) + CELL / 2);
     const cy = Math.round(this.py(shot.row));
     this.rect(cx, cy - 3, 1, 6, COLORS.shot);
+  }
+
+  // FEATURES.bombs: a pulsing dot so it reads distinctly from the shot's
+  // thin line while it's in flight, rendered at the same fractional muzzle
+  // x as the shot for the same anti-detachment reason (see drawShot).
+  private drawBomb(bomb: NonNullable<Game['bomb']>): void {
+    const cx = Math.round(this.px(bomb.visualX) + CELL / 2);
+    const cy = Math.round(this.py(bomb.row));
+    const radius = (this.frame >> 2) % 2 === 0 ? 2 : 1;
+    this.drawDiamond(cx, cy, radius, COLORS.bomb);
+  }
+
+  private drawBombExplosion(explosion: NonNullable<Game['bombExplosion']>): void {
+    const { cx, cy } = this.center(explosion.col, explosion.row);
+    const elapsed = 1 - Math.max(0, Math.min(1, explosion.timer / BOMB_EXPLOSION_SECONDS));
+    const radius = Math.round(explosion.radius * CELL * elapsed);
+    const ctx = this.ctx;
+    ctx.save();
+    ctx.globalAlpha = Math.max(0, 1 - elapsed);
+    ctx.strokeStyle = COLORS.bombBlast;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  private drawBombHud(game: Game): void {
+    const str = `B${Math.max(0, game.bombsRemaining)}`;
+    this.text(str, CANVAS_W - measureText(str) - 4, 0, COLORS.bomb);
   }
 
   private drawShooter(shooter: Game['shooter'], _color: string): void {

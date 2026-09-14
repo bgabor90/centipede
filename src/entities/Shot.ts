@@ -17,9 +17,9 @@ export class Shot {
     this.visualX = visualX;
   }
 
-  update(dt: number): { prevRow: number; newRow: number } {
+  update(dt: number, speed: number = SHOOTER.SHOT_SPEED): { prevRow: number; newRow: number } {
     const prevRow = this.row;
-    this.row += SHOOTER.SHOT_SPEED * dt;
+    this.row += speed * dt;
     if (this.row > GRID.ROWS + 1) this.alive = false;
     return { prevRow, newRow: this.row };
   }

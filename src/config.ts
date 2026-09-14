@@ -283,6 +283,29 @@ export const AUDIO = {
 } as const;
 
 // ---------------------------------------------------------------------------
+// Bomb — a non-arcade feature (see FEATURES.bombs below). Double-tapping fire
+// lobs a bomb that flies up like a shot; pressing fire again while it's in
+// flight detonates it early, and it also auto-detonates on mushroom contact.
+// Detonation clears mushrooms and enemies in a radius around the blast.
+// ---------------------------------------------------------------------------
+export const BOMB = {
+  /** Bombs available per life; double-tapping fire spawns one if any remain. */
+  MAX_STOCK: 3,
+  /** Max gap between two fire presses, in ms, to register as the double-tap that spawns a bomb. */
+  DOUBLE_TAP_WINDOW_MS: 300,
+  /** Default radius (grid cells) of the blast: mushrooms/enemies within this distance of the detonation point are destroyed. Live-tunable via Game.bombRadius. */
+  BLAST_RADIUS: 2,
+  BLAST_RADIUS_MIN: 0.5,
+  BLAST_RADIUS_MAX: 20,
+  BLAST_RADIUS_STEP: 0.25,
+  /** Default bomb flight speed, cells/second -- same as the regular shot. Live-tunable via Game.bombSpeed. */
+  SPEED: SHOOTER.SHOT_SPEED,
+  SPEED_MIN: 15,
+  SPEED_MAX: 90,
+  SPEED_STEP: 2.5,
+} as const;
+
+// ---------------------------------------------------------------------------
 // Difficulty presets — mirrors the real cabinet's operator DIP-switch options
 // (Table 3), exposed here instead of hidden inside logic.
 // ---------------------------------------------------------------------------
@@ -319,6 +342,8 @@ export interface FeatureFlags {
   showGrid: boolean;
   /** Mute all audio. */
   muteAudio: boolean;
+  /** Double-tap fire to lob a bomb (see BOMB above); press fire again or hit a mushroom to detonate it. */
+  bombs: boolean;
 }
 
 export const DEFAULT_FEATURES: FeatureFlags = {
@@ -329,4 +354,5 @@ export const DEFAULT_FEATURES: FeatureFlags = {
   slowMotion: false,
   showGrid: false,
   muteAudio: false,
+  bombs: false,
 };

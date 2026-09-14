@@ -2,7 +2,7 @@ import { Game } from './Game';
 import { Renderer } from './systems/Renderer';
 import { AudioSystem } from './systems/AudioSystem';
 import { InputSystem } from './systems/InputSystem';
-import type { FeatureFlags } from './config';
+import { BOMB, type FeatureFlags } from './config';
 
 const canvas = document.getElementById('screen') as HTMLCanvasElement;
 const featurePanel = document.getElementById('feature-panel') as HTMLDivElement;
@@ -42,6 +42,42 @@ window.addEventListener('keydown', (e) => {
     featurePanel.classList.toggle('open');
   }
 });
+
+// -- bomb levers -------------------------------------------------------------
+function wireLever(
+  rangeId: string,
+  valId: string,
+  min: number,
+  max: number,
+  step: number,
+  get: () => number,
+  set: (v: number) => void,
+  decimals: number
+): void {
+  const range = document.getElementById(rangeId) as HTMLInputElement;
+  const val = document.getElementById(valId) as HTMLSpanElement;
+  range.min = String(min);
+  range.max = String(max);
+  range.step = String(step);
+  range.value = String(get());
+  val.textContent = get().toFixed(decimals);
+  range.addEventListener('input', () => {
+    const v = parseFloat(range.value);
+    set(v);
+    val.textContent = v.toFixed(decimals);
+  });
+}
+
+wireLever(
+  'bombRadiusRange', 'bombRadiusVal',
+  BOMB.BLAST_RADIUS_MIN, BOMB.BLAST_RADIUS_MAX, BOMB.BLAST_RADIUS_STEP,
+  () => game.bombRadius, (v) => (game.bombRadius = v), 2
+);
+wireLever(
+  'bombSpeedRange', 'bombSpeedVal',
+  BOMB.SPEED_MIN, BOMB.SPEED_MAX, BOMB.SPEED_STEP,
+  () => game.bombSpeed, (v) => (game.bombSpeed = v), 1
+);
 
 window.addEventListener('resize', () => renderer.resizeToFit());
 renderer.resizeToFit();

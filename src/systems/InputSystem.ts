@@ -1,4 +1,4 @@
-import { GRID, ZONES } from '../config';
+import { GRID, ZONES, BOMB } from '../config';
 import { CELL, HEADER_H } from './Renderer';
 import type { InputState } from '../Game';
 
@@ -15,6 +15,10 @@ export class InputSystem {
   private keys = new Set<string>();
   private fireHeld = false;
   private firePressed = false;
+  /** Timestamp of the last fire-button down-edge, for double-tap detection. */
+  private lastFireEdgeAt = -Infinity;
+  /** One-shot flag: the most recent fire edge was a quick second press. */
+  private doubleTapPending = false;
   /** One-shot key presses (e.g. pause, feature panel) — populated on keydown
    * and only cleared when consumed, so a very brief press can't race past a
    * single animation frame the way checking the "currently held" set would. */
@@ -23,11 +27,7 @@ export class InputSystem {
 
   constructor(private canvas: HTMLCanvasElement) {
     canvas.addEventListener('mousemove', (e) => this.onMouseMove(e));
-    canvas.addEventListener('mousedown', () => {
-      if (!this.fireHeld) this.firePressed = true;
-      this.fireHeld = true;
-      this.onFireEdge?.();
-    });
+    canvas.addEventListener('mousedown', () => this.onFireDown());
     window.addEventListener('mouseup', () => (this.fireHeld = false));
     canvas.addEventListener('contextmenu', (e) => e.preventDefault());
     canvas.addEventListener('touchstart', (e) => this.onTouch(e), { passive: false });
@@ -38,11 +38,7 @@ export class InputSystem {
       this.keys.add(e.key.toLowerCase());
       this.pressedEdges.add(e.key.toLowerCase());
       if (e.key === ' ' || e.key.toLowerCase() === 'z') {
-        if (!this.fireHeld) {
-          this.firePressed = true;
-          this.onFireEdge?.();
-        }
-        this.fireHeld = true;
+        this.onFireDown();
         e.preventDefault();
       }
     });
@@ -50,6 +46,17 @@ export class InputSystem {
       this.keys.delete(e.key.toLowerCase());
       if (e.key === ' ' || e.key.toLowerCase() === 'z') this.fireHeld = false;
     });
+  }
+
+  private onFireDown(): void {
+    if (!this.fireHeld) {
+      this.firePressed = true;
+      const now = performance.now();
+      if (now - this.lastFireEdgeAt <= BOMB.DOUBLE_TAP_WINDOW_MS) this.doubleTapPending = true;
+      this.lastFireEdgeAt = now;
+    }
+    this.fireHeld = true;
+    this.onFireEdge?.();
   }
 
   private onMouseMove(e: MouseEvent): void {
@@ -102,7 +109,21 @@ export class InputSystem {
     return false;
   }
 
+  private consumeDoubleTap(): boolean {
+    if (this.doubleTapPending) {
+      this.doubleTapPending = false;
+      return true;
+    }
+    return false;
+  }
+
   computeInput(shooterX: number, shooterY: number): InputState {
+    // Consumed once per call regardless of movement mode below — a fresh
+    // fire press (and whether it was the second half of a quick double-tap)
+    // matters the same way whether the player is steering by mouse or keys.
+    const firePressEdge = this.consumeFirePress();
+    const bombDoubleTap = this.consumeDoubleTap();
+
     const left = this.isKeyDown('arrowleft') || this.isKeyDown('a');
     const right = this.isKeyDown('arrowright') || this.isKeyDown('d');
     const up = this.isKeyDown('arrowup') || this.isKeyDown('w');
@@ -118,6 +139,8 @@ export class InputSystem {
         targetY: clamp(shooterY + dy * 100, 1, ZONES.SHOOTER_MAX_ROW),
         firing: this.fireHeld,
         instantMove: false,
+        firePressEdge,
+        bombDoubleTap,
       };
     }
 
@@ -127,6 +150,8 @@ export class InputSystem {
         targetY: clamp(this.mouseRow, 1, ZONES.SHOOTER_MAX_ROW),
         firing: this.fireHeld,
         instantMove: true,
+        firePressEdge,
+        bombDoubleTap,
       };
     }
 
@@ -138,6 +163,8 @@ export class InputSystem {
       targetY: shooterY,
       firing: this.fireHeld,
       instantMove: true,
+      firePressEdge,
+      bombDoubleTap,
     };
   }
 }

@@ -409,6 +409,14 @@ export class AudioSystem {
         case 'fire':
           if (!this.playSample('shot')) this.playOneShot(SHOT_FREQ, 4, 1, 'square');
           break;
+        // FEATURES.bombs -- not part of the arcade sound table, just simple
+        // placeholder sfx distinct from the regular shot/explosion sounds.
+        case 'bombSpawn':
+          this.blip({ freq: 180, dur: 0.08, type: 'square', gain: 0.25, slideTo: 260 });
+          break;
+        case 'bombExplode':
+          this.playOneShot(EXPLOSION_FREQ, EXPLOSION_CTRL, 6, 'sawtooth');
+          break;
         case 'mushroomDamaged':
           if (!this.playSample('mushroom')) this.blip({ freq: 300, dur: 0.04, type: 'square', gain: 0.2 });
           break;

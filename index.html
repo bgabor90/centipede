@@ -87,6 +87,25 @@
       color: #666;
       font-size: 10px;
     }
+    #feature-panel .lever-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin: 6px 0 6px 20px;
+    }
+    #feature-panel .lever-row label {
+      flex: 1;
+      margin: 0;
+      cursor: default;
+    }
+    #feature-panel .lever-row input[type="range"] {
+      width: 80px;
+    }
+    #feature-panel .lever-row span {
+      width: 32px;
+      text-align: right;
+      color: #4be8ff;
+    }
   </style>
 </head>
 <body>
@@ -101,6 +120,17 @@
       <label><input type="checkbox" data-flag="godMode" /> God mode</label>
       <label><input type="checkbox" data-flag="slowMotion" /> Slow motion</label>
       <label><input type="checkbox" data-flag="muteAudio" /> Mute audio</label>
+      <label><input type="checkbox" data-flag="bombs" /> Bombs (double-tap fire)</label>
+      <div class="lever-row">
+        <label for="bombRadiusRange">Blast radius</label>
+        <input type="range" id="bombRadiusRange" />
+        <span id="bombRadiusVal"></span>
+      </div>
+      <div class="lever-row">
+        <label for="bombSpeedRange">Bomb speed</label>
+        <input type="range" id="bombSpeedRange" />
+        <span id="bombSpeedVal"></span>
+      </div>
       <div class="hint">Press F to close</div>
     </div>
   </div>

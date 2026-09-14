@@ -1,4 +1,5 @@
 import {
+  BOMB,
   DEFAULT_FEATURES,
   DEFAULT_OPERATOR_OPTIONS,
   FLEA,
@@ -32,6 +33,8 @@ export interface VanityEntry {
 
 export type GameEventType =
   | 'fire'
+  | 'bombSpawn'
+  | 'bombExplode'
   | 'mushroomDamaged'
   | 'mushroomDestroyed'
   | 'centipedeBodyHit'
@@ -66,6 +69,10 @@ export interface InputState {
   firing: boolean;
   /** If true, snap the shooter directly to target instead of easing (mouse mode). */
   instantMove: boolean;
+  /** True for exactly one tick on a fresh fire-button press — an edge, independent of the held-level `firing`. */
+  firePressEdge: boolean;
+  /** True when `firePressEdge` is the second press of a quick double-tap (see BOMB.DOUBLE_TAP_WINDOW_MS). */
+  bombDoubleTap: boolean;
 }
 
 interface WaveSpec {
@@ -108,6 +115,9 @@ const SPIDER_POINTS_POPUP_SECONDS = 1;
 // dedicated PLAYER_DEATH_ANIMATION state instead of a silent delay.
 const PLAYER_DEATH_ANIMATION_SECONDS = 32 / 60;
 const INITIALS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ ';
+// Not an arcade-verified value (the bomb is a non-arcade FEATURES.bombs
+// mechanic) -- just long enough for the blast ring to read clearly.
+export const BOMB_EXPLOSION_SECONDS = 12 / 60;
 
 export class Game {
   mushrooms = new MushroomField();
@@ -117,6 +127,16 @@ export class Game {
   spider: Spider | null = null;
   flea: Flea | null = null;
   scorpion: Scorpion | null = null;
+
+  // FEATURES.bombs: a second, independent projectile slot (see updateBomb/
+  // explodeBomb below). Reuses the Shot entity for its identical straight-up
+  // movement -- the bomb differs only in what happens when it stops.
+  bomb: Shot | null = null;
+  bombsRemaining = BOMB.MAX_STOCK;
+  bombExplosion: { row: number; col: number; timer: number; radius: number } | null = null;
+  /** Live-tunable levers (feature panel), not reset by startNewGame/killPlayer -- standing settings, like `options`, not per-life state. */
+  bombRadius: number = BOMB.BLAST_RADIUS;
+  bombSpeed: number = BOMB.SPEED;
 
   score = 0;
   highScore = 0;
@@ -216,6 +236,9 @@ export class Game {
     this.scatterInitialMushrooms();
     this.centipede.clear();
     this.shot = null;
+    this.bomb = null;
+    this.bombsRemaining = BOMB.MAX_STOCK;
+    this.bombExplosion = null;
     this.playerDeathLocation = null;
     this.spider = null;
     this.flea = null;
@@ -252,6 +275,9 @@ export class Game {
     this.scatterAttractMushrooms();
     this.centipede.clear();
     this.shot = null;
+    this.bomb = null;
+    this.bombsRemaining = BOMB.MAX_STOCK;
+    this.bombExplosion = null;
     this.playerDeathLocation = null;
     this.spider = null;
     this.flea = null;
@@ -375,6 +401,22 @@ export class Game {
       this.emit('fire');
     }
 
+    // FEATURES.bombs: the bomb is a second, independent projectile slot
+    // triggered off the raw fire-button edge rather than the held-level
+    // `firing` used for the normal shot above. A press while a bomb is
+    // already in flight detonates it early; otherwise a quick double-tap
+    // (bombDoubleTap) spawns a new one if any stock remains.
+    if (this.features.bombs && input.firePressEdge) {
+      if (this.bomb) {
+        this.explodeBomb(Math.round(this.bomb.row), this.bomb.col);
+        this.bomb = null;
+      } else if (input.bombDoubleTap && this.bombsRemaining > 0) {
+        this.bomb = new Shot(this.shooter.col, this.shooter.y + 0.5, this.shooter.x);
+        this.bombsRemaining--;
+        this.emit('bombSpawn');
+      }
+    }
+
     // VERIFIED (MainLoop, $2031-$2055): the real per-frame order is
     // MoveCentipede, MovePlayer, MoveSpider, UpdateShot, then MoveScorpion,
     // MoveFlea -- so the shot's collision check sees the centipede and
@@ -386,6 +428,7 @@ export class Game {
     this.updateCentipede(dt);
     this.updateSpider(dt);
     this.updateShot(dt);
+    this.updateBomb(dt);
     this.updateScorpion(dt);
     this.updateFlea(dt);
     this.updateSideFeed(dt);
@@ -398,6 +441,7 @@ export class Game {
     this.updateWaveDelay(dt);
     this.updateKillFlashes(dt);
     this.updateSpiderPointsPopup(dt);
+    this.updateBombExplosion(dt);
   }
 
   // The real ROM has no exclusive "title card" / "demo" / "high scores"
@@ -583,6 +627,128 @@ export class Game {
 
   private spawnKillFlash(row: number, col: number, kind: 'default' | 'scorpion' = 'default'): void {
     this.killFlashes.push({ row, col, timer: KILL_FLASH_SECONDS, kind });
+  }
+
+  // ---------------------------------------------------------------------
+  // Bomb (FEATURES.bombs) -- not part of the arcade original. Flies
+  // straight up exactly like a shot; only detonates early (Space) or on
+  // mushroom contact, rather than resolving on the first thing it touches.
+  // ---------------------------------------------------------------------
+
+  private updateBomb(dt: number): void {
+    if (!this.bomb) return;
+    const { prevRow, newRow } = this.bomb.update(dt, this.bombSpeed);
+    if (!this.bomb.alive) {
+      this.bomb = null;
+      return;
+    }
+
+    const col = this.bomb.col;
+    const startRow = Math.floor(prevRow);
+    const endRow = Math.ceil(newRow);
+    for (let r = startRow; r <= endRow; r++) {
+      if (r < 1 || r > GRID.ROWS) continue;
+      if (this.mushrooms.has(r, col)) {
+        this.explodeBomb(r, col);
+        this.bomb = null;
+        return;
+      }
+    }
+  }
+
+  /** Destroys every mushroom and enemy within BOMB.BLAST_RADIUS of (row, col), scoring each the same as a direct shot kill would. */
+  private explodeBomb(row: number, col: number): void {
+    const radius = this.bombRadius;
+    this.bombExplosion = { row, col, timer: BOMB_EXPLOSION_SECONDS, radius };
+    this.emit('bombExplode');
+
+    const r2 = radius * radius;
+    const within = (er: number, ec: number) => {
+      const dr = er - row;
+      const dc = ec - col;
+      return dr * dr + dc * dc <= r2;
+    };
+
+    const minR = Math.max(1, Math.floor(row - radius));
+    const maxR = Math.min(GRID.ROWS, Math.ceil(row + radius));
+    const minC = Math.max(1, Math.floor(col - radius));
+    const maxC = Math.min(GRID.COLS, Math.ceil(col + radius));
+    for (let r = minR; r <= maxR; r++) {
+      for (let c = minC; c <= maxC; c++) {
+        if (this.mushrooms.has(r, c) && within(r, c)) {
+          this.mushrooms.remove(r, c);
+          this.addScore(SCORING.MUSHROOM_DESTROYED);
+          this.emit('mushroomDestroyed', SCORING.MUSHROOM_DESTROYED);
+        }
+      }
+    }
+
+    // Destroying a segment can split its chain (pushing a new one into
+    // this.centipede.chains) or empty it out entirely, so indices captured
+    // before any destruction go stale after the first hit -- rescan fresh
+    // segment views on every iteration instead of working off a snapshot.
+    // The guard just bounds a pathological loop; a real blast clears well
+    // under a wave's max ~150 total segments long before it'd matter.
+    for (let guard = 0; guard < 500; guard++) {
+      let hit: { chain: Chain; index: number } | null = null;
+      findHit: for (const chain of this.centipede.chains) {
+        for (const v of chain.getSegmentViews()) {
+          if (within(v.row, v.col)) {
+            hit = { chain, index: v.index };
+            break findHit;
+          }
+        }
+      }
+      if (!hit) break;
+      const result = this.centipede.destroySegment(hit.chain, hit.index, this.mushrooms);
+      this.addScore(result.points);
+      this.emit(result.wasHead ? 'centipedeHeadHit' : 'centipedeBodyHit', result.points);
+      this.spawnKillFlash(result.cell.row, result.cell.col);
+    }
+
+    if (this.flea && within(this.flea.y, this.flea.col)) {
+      this.addScore(SCORING.FLEA);
+      this.emit('fleaKilled');
+      this.spawnKillFlash(this.flea.row, this.flea.col);
+      this.flea = null;
+    }
+
+    if (this.scorpion && within(this.scorpion.row, this.scorpion.x)) {
+      this.addScore(SCORING.SCORPION);
+      this.emit('scorpionHit', SCORING.SCORPION);
+      this.spawnKillFlash(this.scorpion.row, this.scorpion.col, 'scorpion');
+      this.scorpion = null;
+    }
+
+    if (this.spider && within(this.spider.y, this.spider.x)) {
+      // Mirrors the shot's own spider-distance scoring tiers in updateShot
+      // (vertical distance from the shooter only, per CalcSpdrPts).
+      const dist = Math.abs(this.spider.y - this.shooter.y);
+      const points =
+        dist <= SCORING.SPIDER_CLOSE_ROWS
+          ? SCORING.SPIDER_CLOSE
+          : dist <= SCORING.SPIDER_MEDIUM_ROWS
+            ? SCORING.SPIDER_MEDIUM
+            : SCORING.SPIDER_FAR;
+      this.addScore(points);
+      this.emit('spiderHit', points);
+      this.spawnKillFlash(this.spider.row, this.spider.col);
+      this.spiderPointsPopup = {
+        row: this.spider.row,
+        col: this.spider.col,
+        text: String(points),
+        delay: KILL_FLASH_SECONDS,
+        timer: SPIDER_POINTS_POPUP_SECONDS,
+      };
+      this.spider = null;
+      this.spiderTimer = SPIDER.RESPAWN_AFTER_KILL_MS / 1000;
+    }
+  }
+
+  private updateBombExplosion(dt: number): void {
+    if (!this.bombExplosion) return;
+    this.bombExplosion.timer -= dt;
+    if (this.bombExplosion.timer <= 0) this.bombExplosion = null;
   }
 
   private updateKillFlashes(dt: number): void {
@@ -885,6 +1051,9 @@ export class Game {
     this.emit('playerDeath');
     this.lives--;
     this.shot = null;
+    this.bomb = null;
+    this.bombsRemaining = BOMB.MAX_STOCK;
+    this.bombExplosion = null;
     this.playerDeathLocation = { x: this.shooter.x, y: this.shooter.y };
     this.deathTimer = PLAYER_DEATH_ANIMATION_SECONDS;
     this.shooter.alive = false;
