@@ -309,7 +309,15 @@ export class AudioSystem {
 
   update(dt: number, game: Game): void {
     if (!this.ctx || this.muted || isAttractLike(game.state)) {
+      // Matches real hardware zeroing all four channels every frame while
+      // attract_mode is set: fully clear CH2's shared-voice state here too,
+      // not just the flea tone. Otherwise a source left mid-play at the
+      // moment GAME_OVER starts (e.g. the bonus-life jingle) never gets
+      // reset -- the next game's centipede-move thump loses the priority
+      // check forever since nothing else clears a stale 'bonus' owner.
       this.stopFleaTone();
+      this.stopCh2();
+      this.ch4EndsAt = 0;
       return;
     }
     const now = this.ctx.currentTime;
@@ -379,14 +387,19 @@ export class AudioSystem {
       if (this.ch2Source === 'scorpionOrFlea') this.stopCh2();
 
       // CH2 default: the centipede's own movement thump, only while
-      // nothing higher-priority currently owns the channel.
+      // nothing higher-priority currently owns the channel, and only
+      // during real play -- silenced through the post-death explosion
+      // pause and mushroom tally (the centipede itself is frozen there
+      // too), resuming as soon as play starts back up.
       const segs = game.centipede.totalSegments;
-      if (segs > 0) {
+      if (segs > 0 && game.state === 'PLAYING') {
         if (!this.ch2Source || (this.ch2Source === 'centipedeMove' && now >= this.ch2EndsAt)) {
           if (!this.playCh2Sample('centipedeMove', 'centipede')) {
             this.playCh2('centipedeMove', CENTIPEDE_MOVE_FREQ, CENTIPEDE_MOVE_CTRL, 1, 'square');
           }
         }
+      } else if (this.ch2Source === 'centipedeMove') {
+        this.stopCh2();
       }
     }
   }
