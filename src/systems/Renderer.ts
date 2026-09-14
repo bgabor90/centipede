@@ -52,6 +52,14 @@ const COLORS = {
   // Sampled from the reference sheet's scorpion row.
   scorpionBody: '#fffdc8',
   scorpionPincer: '#ea3323',
+  // Bomb power-up: poison-purple sac (matches poisonedSeg) with a red
+  // core, cream highlight/spike, and a toxic-lime spore accent for the
+  // drifting particles unique to this sprite.
+  bombBody: '#a64bff',
+  bombCore: '#ea3323',
+  bombHighlight: '#fffdc8',
+  bombSpike: '#fffbc0',
+  bombSpore: '#c9ff3d',
   shot: '#ff3333',
   tallyFlash: '#ffffff',
   // Sampled from the reference sheet's explosion-burst row.

@@ -661,6 +661,41 @@ export const SCORPION_EXPLOSION_FRAMES: Mask[] = [
   ],
 ];
 
+/**
+ * Bomb power-up: a poisoned egg-sac shape (green/poison body, red core,
+ * cream highlight, pale spike tips) with loose toxic spore particles
+ * drifting just outside the main silhouette. `F` is the poison body, `D`
+ * is the red core detail, `H` is the cream highlight, `L` is a pale spike
+ * tip, and `S` is a drifting spore particle. The two frames only move the
+ * `S` spores in/out — the sac body itself is static — so cycling them
+ * with `pickFrame` reads as spores drifting around a stationary bomb
+ * rather than the bomb itself animating.
+ */
+export const BOMB_SPORE_FRAMES: Mask[] = [
+  [
+    '..S....LL....S..',
+    '.....FFFFFF.....',
+    '...S.FDFFFDFF.S.',
+    '....FFDFDFFF....',
+    '....FFFFFFFF....',
+    '.....FHFHFF.....',
+    '..S...FFFF...S..',
+    '.......LL.......',
+  ],
+  [
+    '.S.....LL.....S.',
+    '.....FFFFFF.....',
+    '..S..FDFFFDFF..S',
+    '....FFDFDFFF....',
+    '....FFFFFFFF....',
+    '.....FHFHFF.....',
+    '.S....FFFF....S.',
+    '.......LL.......',
+  ],
+];
+
+export const BOMB_MASK: Mask = BOMB_SPORE_FRAMES[0];
+
 export const MASK_W = 16;
 export const MASK_H = 8;
 
